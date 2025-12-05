@@ -255,60 +255,6 @@ namespace SkyBox.API.Persistence.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("SkyBox.API.Entities.File", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("FilePath")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FolderId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<bool>("IsFavorite")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Metadata")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("MimeType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OwnerId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("Size")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Slug")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FolderId");
-
-                    b.HasIndex("OwnerId");
-
-                    b.ToTable("Files");
-                });
-
             modelBuilder.Entity("SkyBox.API.Entities.Folder", b =>
                 {
                     b.Property<string>("Id")
@@ -343,6 +289,45 @@ namespace SkyBox.API.Persistence.Migrations
                     b.HasIndex("ParentId");
 
                     b.ToTable("Folders");
+                });
+
+            modelBuilder.Entity("SkyBox.API.Entities.UploadedFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("FileExtension")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("FolderId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsFavorite")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("StoredFileName")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FolderId");
+
+                    b.ToTable("Files");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -396,23 +381,6 @@ namespace SkyBox.API.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("SkyBox.API.Entities.File", b =>
-                {
-                    b.HasOne("SkyBox.API.Entities.Folder", "Folder")
-                        .WithMany("Files")
-                        .HasForeignKey("FolderId");
-
-                    b.HasOne("SkyBox.API.Entities.ApplicationUser", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Folder");
-
-                    b.Navigation("Owner");
-                });
-
             modelBuilder.Entity("SkyBox.API.Entities.Folder", b =>
                 {
                     b.HasOne("SkyBox.API.Entities.ApplicationUser", "Owner")
@@ -426,6 +394,15 @@ namespace SkyBox.API.Persistence.Migrations
                     b.Navigation("Owner");
 
                     b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("SkyBox.API.Entities.UploadedFile", b =>
+                {
+                    b.HasOne("SkyBox.API.Entities.Folder", "Folder")
+                        .WithMany("Files")
+                        .HasForeignKey("FolderId");
+
+                    b.Navigation("Folder");
                 });
 
             modelBuilder.Entity("SkyBox.API.Entities.Folder", b =>

@@ -1,13 +1,11 @@
-﻿using Mapster;
-using MapsterMapper;
+﻿using MapsterMapper;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using SkyBox.API.Entities;
 using SkyBox.API.Errors;
 using SkyBox.API.Persistence;
 using System.Reflection;
-using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
-using FluentValidation;
+using SkyBox.API.Validators;
+using FluentValidation.AspNetCore;
+
 
 
 namespace SkyBox.API;
@@ -35,6 +33,8 @@ public static class DependencyInjection
             .AddFluentValidationConfigurations();
 
         // Register services
+        services.AddScoped<IFileService, FileService>();
+
         
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();

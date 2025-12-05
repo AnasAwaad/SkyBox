@@ -4,13 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using SkyBox.API.Entities;
 using System.Reflection;
 using System.Security.Claims;
-using File = SkyBox.API.Entities.File;
 
 namespace SkyBox.API.Persistence;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IHttpContextAccessor httpContextAccessor) : IdentityDbContext<ApplicationUser>(options)
 {
-    public DbSet<File> Files { get; set; }
+    public DbSet<UploadedFile> Files { get; set; }
     public DbSet<Folder> Folders { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

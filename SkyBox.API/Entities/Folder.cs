@@ -17,7 +17,7 @@ public class Folder
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public bool IsFavorite { get; set; } = false;
-    public ICollection<File> Files { get; set; } = [];
+    public ICollection<UploadedFile> Files { get; set; } = [];
     //public ICollection<Permission> Permissions { get; set; } = new List<Permission>();
     public string? Path { get; set; }
 }
