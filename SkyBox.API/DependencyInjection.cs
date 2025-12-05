@@ -1,0 +1,114 @@
+﻿using Mapster;
+using MapsterMapper;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using SkyBox.API.Entities;
+using SkyBox.API.Errors;
+using SkyBox.API.Persistence;
+using System.Reflection;
+using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
+using FluentValidation;
+
+
+namespace SkyBox.API;
+
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddDependencies(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddControllers();
+        services.AddEndpointsApiExplorer();
+        services.AddSwaggerGen();
+
+
+        var connectionString = configuration.GetConnectionString("DefaultConnection") ??
+            throw new InvalidOperationException("Connection string 'DefaultConnection' not found");
+
+        services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseSqlServer(connectionString));
+
+
+        services
+            .AddAuthConfigurations(configuration)
+            .AddMapsterConfigurations()
+            .AddFluentValidationConfigurations();
+
+        // Register services
+        
+        services.AddExceptionHandler<GlobalExceptionHandler>();
+        services.AddProblemDetails();
+
+        services.AddHttpContextAccessor();
+
+
+        return services;
+    }
+
+    private static IServiceCollection AddMapsterConfigurations(this IServiceCollection services)
+    {
+        var mappingConfig = TypeAdapterConfig.GlobalSettings;
+        mappingConfig.Scan(Assembly.GetExecutingAssembly());
+        services.AddSingleton<IMapper>(new Mapper(mappingConfig));
+
+        return services;
+    }
+
+    private static IServiceCollection AddFluentValidationConfigurations(this IServiceCollection services)
+    {
+        services
+           .AddFluentValidationAutoValidation()
+           .AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+
+        return services;
+    }
+
+    private static IServiceCollection AddAuthConfigurations(this IServiceCollection services,
+        IConfiguration configuration)
+    {
+
+        services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+        {
+            options.Password.RequireDigit = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireNonAlphanumeric = false;
+            options.Password.RequireUppercase = true;
+            options.Password.RequiredLength = 6;
+            options.Password.RequiredUniqueChars = 1;
+            options.User.RequireUniqueEmail = true;
+            options.SignIn.RequireConfirmedEmail = true;
+        })
+        .AddEntityFrameworkStores<ApplicationDbContext>()
+        .AddDefaultTokenProviders();
+
+
+        //services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        //services.AddOptions<JwtOptions>()
+        //    .BindConfiguration(JwtOptions.SectionName)
+        //    .ValidateDataAnnotations()
+        //    .ValidateOnStart();
+
+        //var jwtSettings = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>();
+
+        //services.AddAuthentication(options =>
+        //{
+        //    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        //    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        //}).AddJwtBearer(options =>
+        //{
+        //    options.SaveToken = true;
+        //    options.TokenValidationParameters = new TokenValidationParameters
+        //    {
+        //        ValidateIssuer = true,
+        //        ValidateAudience = true,
+        //        ValidateLifetime = true,
+        //        ValidateIssuerSigningKey = true,
+        //        ValidIssuer = jwtSettings?.Issuer,
+        //        ValidAudience = jwtSettings?.Audience,
+        //        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.Key!))
+        //    };
+        //});
+
+        return services;
+    }
+}
