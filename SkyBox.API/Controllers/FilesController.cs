@@ -45,4 +45,14 @@ public class FilesController(IFileService fileService) : ControllerBase
             File(result.Value.Stream, result.Value.ContentType, result.Value.FileName) :
             result.ToProblem();
     }
+
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteFile([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var result = await fileService.DeleteAsync(id, cancellationToken);
+        return result.IsSuccess ?
+            NoContent() :
+            result.ToProblem();
+    }
 }

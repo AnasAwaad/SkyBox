@@ -302,6 +302,9 @@ namespace SkyBox.API.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("FileExtension")
                         .IsRequired()
                         .HasMaxLength(10)

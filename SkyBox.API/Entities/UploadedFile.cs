@@ -19,5 +19,5 @@ public class UploadedFile
     //public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     //public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public bool IsFavorite { get; set; } = false;
-    //public DateTime? DeletedAt { get; set; }
+    public DateTime? DeletedAt { get; set; }
 }

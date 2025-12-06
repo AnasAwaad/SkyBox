@@ -13,7 +13,9 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
 
     public async Task<Result<PaginatedList<FileListItemResponse>>> GetFilesAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
-        var query = dbContext.Files.AsQueryable();
+        var query = dbContext.Files
+            .Where(x => x.DeletedAt == null)
+            .AsQueryable();
 
         if (!string.IsNullOrEmpty(filters.SearchValue))
             query = query.Where(x => x.FileName.Contains(filters.SearchValue.ToLower()));
@@ -62,7 +64,7 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
     {
         var file = await dbContext.Files.FindAsync(fileId);
 
-        if (file == null)
+        if (file == null || file.DeletedAt != null)
             return Result.Failure<FileContentDto>(FileErrors.FileNotFound);
 
         var path = Path.Combine(_filesPath, file.StoredFileName);
@@ -89,7 +91,7 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
     {
         var file = await dbContext.Files.FindAsync(fileId);
 
-        if (file == null)
+        if (file == null || file.DeletedAt != null)
             return Result.Failure<StreamContentDto>(FileErrors.FileNotFound);
 
         var path = Path.Combine(_filesPath, file.StoredFileName);
@@ -104,6 +106,21 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
         };
 
         return Result.Success(result);
+    }
+
+    public async Task<Result> DeleteAsync(Guid fileId, CancellationToken cancellationToken = default)
+    {
+        var file = await dbContext.Files.FindAsync(fileId);
+
+        if (file == null || file.DeletedAt != null)
+            return Result.Failure<StreamContentDto>(FileErrors.FileNotFound);
+
+        file.DeletedAt = DateTime.UtcNow;
+        file.IsFavorite = false;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
     }
 
     private async Task<UploadedFile> SaveFileAsync(IFormFile file, CancellationToken cancellationToken = default)
@@ -126,5 +143,4 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
 
         return uploadedFile;
     }
-
 }
