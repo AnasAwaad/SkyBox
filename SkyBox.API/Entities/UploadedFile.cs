@@ -13,7 +13,7 @@ public class UploadedFile
     //public string OwnerId { get; set; } = string.Empty;
     //public ApplicationUser Owner { get; set; } = default!;
 
-    public string? FolderId { get; set; }
+    public Guid? FolderId { get; set; }
     public Folder? Folder { get; set; }
 
     //public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

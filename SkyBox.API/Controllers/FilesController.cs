@@ -15,15 +15,15 @@ public class FilesController(IFileService fileService) : ControllerBase
     [HttpPost("upload")]
     public async Task<ActionResult<FileUploadResponse>> UploadFile([FromForm] UploadFileRequest request, CancellationToken cancellationToken)
     {
-        var file = await fileService.UploadAsync(request.File, cancellationToken);
-        return CreatedAtAction(nameof(DownloadFile), new { id = file.Id }, file);
+        var result = await fileService.UploadAsync(request.File,request.FolderId, cancellationToken);
+        return result.IsSuccess ? CreatedAtAction(nameof(DownloadFile), new { id = result.Value.Id }, result.Value) : result.ToProblem();
     }
 
     [HttpPost("upload-many")]
     public async Task<ActionResult<IEnumerable<FileUploadResponse>>> UploadManyFiles([FromForm] UploadManyFilesRequest request, CancellationToken cancellationToken)
     {
-        var files = await fileService.UploadManyAsync(request.Files, cancellationToken);
-        return Ok(files);
+        var result = await fileService.UploadManyAsync(request.Files,request.FolderId, cancellationToken);
+        return result.IsSuccess ? CreatedAtAction(nameof(GetFiles), null, result.Value) : result.ToProblem();
     }
 
     [HttpGet("download/{id}")]

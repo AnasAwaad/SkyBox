@@ -33,30 +33,47 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
 
     }
 
-    public async Task<FileUploadResponse> UploadAsync(IFormFile file, CancellationToken cancellationToken = default)
+    public async Task<Result<FileUploadResponse>> UploadAsync(IFormFile file,Guid? folderId = null, CancellationToken cancellationToken = default)
     {
 
-        var uploadedFile = await SaveFileAsync(file, cancellationToken);
+        if(folderId is not null)
+        {
+            var folder = await dbContext.Folders.FindAsync(folderId);
+
+            if (folder is null)
+                return Result.Failure<FileUploadResponse>(FolderErrors.FolderNotFound);
+        }
+
+        var uploadedFile = await SaveFileAsync(file,folderId, cancellationToken);
 
         await dbContext.AddAsync(uploadedFile, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return uploadedFile.Adapt<FileUploadResponse>();
+        return Result.Success(uploadedFile.Adapt<FileUploadResponse>());
     }
 
-    public async Task<IEnumerable<FileUploadResponse>> UploadManyAsync(IFormFileCollection files, CancellationToken cancellationToken = default)
+    public async Task<Result<IEnumerable<FileUploadResponse>>> UploadManyAsync(IFormFileCollection files, Guid? folderId = null, CancellationToken cancellationToken = default)
     {
+        if (folderId is not null)
+        {
+            var folder = await dbContext.Folders.FindAsync(folderId);
+
+            if (folder is null)
+                return Result.Failure<IEnumerable<FileUploadResponse>>(FolderErrors.FolderNotFound);
+
+        }
+
         List<UploadedFile> uploadedFiles = [];
 
         foreach (var file in files)
         {
-            uploadedFiles.Add(await SaveFileAsync(file, cancellationToken));
+            uploadedFiles.Add(await SaveFileAsync(file,folderId, cancellationToken));
         }
 
         await dbContext.AddRangeAsync(uploadedFiles, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return uploadedFiles.Adapt<IEnumerable<FileUploadResponse>>();
+        return Result.Success(uploadedFiles.Adapt<IEnumerable<FileUploadResponse>>());
     }
 
 
@@ -123,7 +140,7 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
         return Result.Success();
     }
 
-    private async Task<UploadedFile> SaveFileAsync(IFormFile file, CancellationToken cancellationToken = default)
+    private async Task<UploadedFile> SaveFileAsync(IFormFile file,Guid? folderId, CancellationToken cancellationToken = default)
     {
         var randomFileName = Path.GetRandomFileName();
 
@@ -134,7 +151,8 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
             ContentType = file.ContentType,
             FileExtension = Path.GetExtension(file.FileName),
             Size = file.Length,
-            UploadedAt = DateTime.UtcNow
+            UploadedAt = DateTime.UtcNow,
+            FolderId = folderId
         };
 
         var path = Path.Combine(_filesPath, randomFileName);

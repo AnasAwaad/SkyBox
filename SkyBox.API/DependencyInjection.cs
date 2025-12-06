@@ -37,6 +37,7 @@ public static class DependencyInjection
         // Register services
         services.AddScoped<IFileService, FileService>();
         services.AddScoped<ITrashService, TrashService>();
+        services.AddScoped<IFolderService, FolderService>();
 
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
