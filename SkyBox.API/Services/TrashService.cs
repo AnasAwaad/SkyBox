@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SkyBox.API.Errors;
 using SkyBox.API.Persistence;
+using SkyBox.API.Settings;
 using System.Linq.Dynamic.Core;
 
 namespace SkyBox.API.Services;
@@ -10,12 +11,11 @@ public class TrashService(ApplicationDbContext dbContext,
     IWebHostEnvironment webHostEnvironment,
     ILogger<TrashService> logger) : ITrashService
 {
-    private const int TrashRetentionDays = 30;
     private readonly string _filesPath = Path.Combine(webHostEnvironment.WebRootPath, "uploads");
 
     public async Task<Result<PaginatedList<TrashedFileResponse>>> GetTrashFilesAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
-        var threshold = DateTime.UtcNow.AddDays(-TrashRetentionDays);
+        var threshold = DateTime.UtcNow.AddDays(-FileSettings.TrashRetentionDays);
 
         var query = dbContext.Files
             .Where(x => x.DeletedAt != null && x.DeletedAt >= threshold)
@@ -35,8 +35,8 @@ public class TrashService(ApplicationDbContext dbContext,
                 Size = x.Size,
                 ContentType = x.ContentType,
                 DeletedAt = x.DeletedAt!.Value,
-                DaysRemaining = (int)Math.Ceiling(x.DeletedAt.Value.AddDays(TrashRetentionDays).Subtract(DateTime.UtcNow).TotalDays), // permanentDeleteDate - today
-                PermanentDeleteDate = x.DeletedAt.Value.AddDays(TrashRetentionDays)
+                DaysRemaining = (int)Math.Ceiling(x.DeletedAt.Value.AddDays(FileSettings.TrashRetentionDays).Subtract(DateTime.UtcNow).TotalDays), // permanentDeleteDate - today
+                PermanentDeleteDate = x.DeletedAt.Value.AddDays(FileSettings.TrashRetentionDays)
             })
             .AsNoTracking();
 
@@ -54,7 +54,7 @@ public class TrashService(ApplicationDbContext dbContext,
         if (file is null)
             return Result.Failure(FileErrors.FileNotFound);
 
-        var permanentDeleteDate = file.DeletedAt!.Value.AddDays(TrashRetentionDays);
+        var permanentDeleteDate = file.DeletedAt!.Value.AddDays(FileSettings.TrashRetentionDays);
 
         if (permanentDeleteDate < DateTime.UtcNow)
             return Result.Failure(FileErrors.FileExpired);
@@ -71,7 +71,7 @@ public class TrashService(ApplicationDbContext dbContext,
 
     public async Task<Result> PermanentlyDeleteAsync(Guid fileId, CancellationToken cancellationToken = default)
     {
-        var file =await dbContext.Files
+        var file = await dbContext.Files
             .FirstOrDefaultAsync(x => x.Id == fileId && x.DeletedAt != null);
 
         if (file is null)
@@ -105,7 +105,7 @@ public class TrashService(ApplicationDbContext dbContext,
     public async Task<Result<int>> EmptyTrashAsync(CancellationToken cancellationToken = default)
     {
         var trashedFiles = await dbContext.Files
-            .Where(x=>x.DeletedAt != null)
+            .Where(x => x.DeletedAt != null)
             .ToListAsync(cancellationToken);
 
         if (trashedFiles.Count == 0)
@@ -132,5 +132,35 @@ public class TrashService(ApplicationDbContext dbContext,
         var affected = await dbContext.SaveChangesAsync(cancellationToken);
 
         return Result.Success(affected);
+    }
+
+    public async Task<int> PermanentlyDeleteExpiredAsync()
+    {
+        var threshold = DateTime.UtcNow.AddDays(-FileSettings.TrashRetentionDays);
+
+        var expired = await dbContext.Files
+            .Where(f => f.DeletedAt != null && f.DeletedAt <= threshold)
+            .ToListAsync();
+
+        foreach (var file in expired)
+        {
+            var fullPath = Path.Combine(_filesPath, file.StoredFileName);
+
+            if (File.Exists(fullPath))
+            {
+                try 
+                { 
+                    File.Delete(fullPath);
+                }
+                catch
+                {
+                    logger.LogError("Failed to delete file from storage: {FullPath}", fullPath);
+                }
+            }
+
+            dbContext.Files.Remove(file);
+        }
+
+        return await dbContext.SaveChangesAsync();
     }
 }

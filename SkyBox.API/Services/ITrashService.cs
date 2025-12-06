@@ -6,5 +6,6 @@ public interface ITrashService
     Task<Result> RestoreAsync(Guid fileId, CancellationToken cancellationToken = default);
     Task<Result> PermanentlyDeleteAsync(Guid fileId, CancellationToken cancellationToken = default);
     Task<Result<int>> EmptyTrashAsync(CancellationToken cancellationToken = default);
+    Task<int> PermanentlyDeleteExpiredAsync();
 
 }

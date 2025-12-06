@@ -4,10 +4,15 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>7e7d500e-25d4-4c92-9b3e-69aeca58df83</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
 	  <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
+	  <PackageReference Include="Hangfire.AspNetCore" Version="1.8.22" />
+	  <PackageReference Include="Hangfire.Core" Version="1.8.22" />
+	  <PackageReference Include="Hangfire.Dashboard.Basic.Authentication" Version="8.0.0" />
+	  <PackageReference Include="Hangfire.SqlServer" Version="1.8.22" />
 	  <PackageReference Include="Mapster" Version="7.4.0" />
 	  <PackageReference Include="Mapster.DependencyInjection" Version="1.0.1" />
 	  <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.22" />

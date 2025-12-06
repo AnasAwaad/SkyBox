@@ -1,10 +1,11 @@
-﻿using MapsterMapper;
+﻿using FluentValidation.AspNetCore;
+using Hangfire;
+using MapsterMapper;
 using Microsoft.AspNetCore.Identity;
 using SkyBox.API.Errors;
 using SkyBox.API.Persistence;
-using System.Reflection;
 using SkyBox.API.Validators;
-using FluentValidation.AspNetCore;
+using System.Reflection;
 
 
 
@@ -30,7 +31,8 @@ public static class DependencyInjection
         services
             .AddAuthConfigurations(configuration)
             .AddMapsterConfigurations()
-            .AddFluentValidationConfigurations();
+            .AddFluentValidationConfigurations()
+            .AddBackgroundJobsConfigurations(configuration);
 
         // Register services
         services.AddScoped<IFileService, FileService>();
@@ -109,6 +111,21 @@ public static class DependencyInjection
         //        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.Key!))
         //    };
         //});
+
+        return services;
+    }
+
+    private static IServiceCollection AddBackgroundJobsConfigurations(this IServiceCollection services, IConfiguration configuration)
+    {
+        // Add Hangfire services.
+        services.AddHangfire(config => config
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseSqlServerStorage(configuration.GetConnectionString("HangfireConnection")));
+
+        // Add the processing server as IHostedService
+        services.AddHangfireServer();
 
         return services;
     }
