@@ -1,5 +1,7 @@
 ﻿
+using SkyBox.API.Errors;
 using SkyBox.API.Persistence;
+using System.Linq.Dynamic.Core;
 
 namespace SkyBox.API.Services;
 
@@ -9,18 +11,38 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
     private readonly string _filesPath = $"{webHostEnvironment.WebRootPath}/uploads";
 
 
-    public async Task<Guid> UploadAsync(IFormFile file, CancellationToken cancellationToken = default)
+    public async Task<Result<PaginatedList<FileListItemResponse>>> GetFilesAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
-        
-        var uploadedFile =await SaveFileAsync(file, cancellationToken);
+        var query = dbContext.Files.AsQueryable();
 
-        await dbContext.AddAsync(uploadedFile,cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        if (!string.IsNullOrEmpty(filters.SearchValue))
+            query = query.Where(x => x.FileName.Contains(filters.SearchValue.ToLower()));
 
-        return uploadedFile.Id;
+        if (!string.IsNullOrEmpty(filters.SortColumn))
+            query = query.OrderBy($"{filters.SortColumn} {filters.SortDirection}");
+
+        var source = query
+            .ProjectToType<FileListItemResponse>()
+            .AsNoTracking();
+
+        var result = await PaginatedList<FileListItemResponse>.CreateAsync(source, filters.PageNumber, filters.PageSize, cancellationToken);
+
+        return Result.Success(result);
+
     }
 
-    public async Task<IEnumerable<Guid>> UploadManyAsync(IFormFileCollection files, CancellationToken cancellationToken = default)
+    public async Task<FileUploadResponse> UploadAsync(IFormFile file, CancellationToken cancellationToken = default)
+    {
+
+        var uploadedFile = await SaveFileAsync(file, cancellationToken);
+
+        await dbContext.AddAsync(uploadedFile, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return uploadedFile.Adapt<FileUploadResponse>();
+    }
+
+    public async Task<IEnumerable<FileUploadResponse>> UploadManyAsync(IFormFileCollection files, CancellationToken cancellationToken = default)
     {
         List<UploadedFile> uploadedFiles = [];
 
@@ -29,48 +51,62 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
             uploadedFiles.Add(await SaveFileAsync(file, cancellationToken));
         }
 
-        await dbContext.AddRangeAsync(uploadedFiles,cancellationToken);
+        await dbContext.AddRangeAsync(uploadedFiles, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return uploadedFiles.Select(x => x.Id);
+        return uploadedFiles.Adapt<IEnumerable<FileUploadResponse>>();
     }
 
 
-    public async Task<(byte[] fileContent, string contentType, string fileName)> DownloadAsync(Guid fileId, CancellationToken cancellationToken = default)
+    public async Task<Result<FileContentDto>> DownloadAsync(Guid fileId, CancellationToken cancellationToken = default)
     {
         var file = await dbContext.Files.FindAsync(fileId);
 
         if (file == null)
-            return ([], string.Empty, string.Empty);
+            return Result.Failure<FileContentDto>(FileErrors.FileNotFound);
 
-        var path = Path.Combine(_filesPath,file.StoredFileName);
+        var path = Path.Combine(_filesPath, file.StoredFileName);
 
         MemoryStream memoryStream = new();
-        using FileStream fileStream = new (path,FileMode.Open);
+        using FileStream fileStream = new(path, FileMode.Open);
 
-        await fileStream.CopyToAsync(memoryStream,cancellationToken);
+        await fileStream.CopyToAsync(memoryStream, cancellationToken);
 
         memoryStream.Position = 0;
 
-        return (memoryStream.ToArray(),file.ContentType,file.FileName);
+        var result = new FileContentDto
+        {
+            Content = memoryStream.ToArray(),
+            ContentType = file.ContentType,
+            FileName = file.FileName
+        };
+
+        return Result.Success(result);
 
     }
 
-    public async Task<(FileStream? stream, string contentType, string fileName)> StreamAsync(Guid fileId, CancellationToken cancellationToken = default)
+    public async Task<Result<StreamContentDto>> StreamAsync(Guid fileId, CancellationToken cancellationToken = default)
     {
         var file = await dbContext.Files.FindAsync(fileId);
 
         if (file == null)
-            return (null, string.Empty, string.Empty);
+            return Result.Failure<StreamContentDto>(FileErrors.FileNotFound);
 
         var path = Path.Combine(_filesPath, file.StoredFileName);
 
         var fileStream = File.OpenRead(path);
 
-        return (fileStream, file.ContentType, file.FileName);
+        var result = new StreamContentDto
+        {
+            Stream = fileStream,
+            ContentType = file.ContentType,
+            FileName = file.FileName
+        };
+
+        return Result.Success(result);
     }
 
-    private async Task<UploadedFile> SaveFileAsync(IFormFile file,CancellationToken cancellationToken = default)
+    private async Task<UploadedFile> SaveFileAsync(IFormFile file, CancellationToken cancellationToken = default)
     {
         var randomFileName = Path.GetRandomFileName();
 
@@ -80,6 +116,8 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
             StoredFileName = randomFileName,
             ContentType = file.ContentType,
             FileExtension = Path.GetExtension(file.FileName),
+            Size = file.Length,
+            UploadedAt = DateTime.UtcNow
         };
 
         var path = Path.Combine(_filesPath, randomFileName);

@@ -4,4 +4,7 @@ global using FluentValidation;
 global using SkyBox.API.Services;
 global using Mapster;
 global using SkyBox.API.Contracts;
+global using SkyBox.API.Contracts.Common;
+global using SkyBox.API.Abstractions;
+
 

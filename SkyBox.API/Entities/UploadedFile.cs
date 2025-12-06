@@ -7,6 +7,8 @@ public class UploadedFile
     public string StoredFileName { get; set; } = string.Empty;
     public string ContentType { get; set; } = string.Empty;
     public string FileExtension { get; set; } = string.Empty;
+    public long Size { get; set; }
+    public DateTime UploadedAt { get; set; }
 
     //public string OwnerId { get; set; } = string.Empty;
     //public ApplicationUser Owner { get; set; } = default!;
