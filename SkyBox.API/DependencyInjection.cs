@@ -1,11 +1,18 @@
 ﻿using FluentValidation.AspNetCore;
 using Hangfire;
 using MapsterMapper;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.IdentityModel.Tokens;
+using SkyBox.API.Authentication;
 using SkyBox.API.Errors;
 using SkyBox.API.Persistence;
+using SkyBox.API.Services;
+using SkyBox.API.Settings;
 using SkyBox.API.Validators;
 using System.Reflection;
+using System.Text;
 
 
 
@@ -38,10 +45,14 @@ public static class DependencyInjection
         services.AddScoped<IFileService, FileService>();
         services.AddScoped<ITrashService, TrashService>();
         services.AddScoped<IFolderService, FolderService>();
-
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IJwtProvider, JwtProvider>();
+        services.AddScoped<IEmailSender, EmailService>();
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
+
+        services.Configure<MailSettings>(configuration.GetSection(nameof(MailSettings)));
 
         services.AddHttpContextAccessor();
 
@@ -86,32 +97,33 @@ public static class DependencyInjection
         .AddDefaultTokenProviders();
 
 
-        //services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
-        //services.AddOptions<JwtOptions>()
-        //    .BindConfiguration(JwtOptions.SectionName)
-        //    .ValidateDataAnnotations()
-        //    .ValidateOnStart();
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.AddOptions<JwtOptions>()
+            .BindConfiguration(JwtOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
 
-        //var jwtSettings = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>();
 
-        //services.AddAuthentication(options =>
-        //{
-        //    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        //    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        //}).AddJwtBearer(options =>
-        //{
-        //    options.SaveToken = true;
-        //    options.TokenValidationParameters = new TokenValidationParameters
-        //    {
-        //        ValidateIssuer = true,
-        //        ValidateAudience = true,
-        //        ValidateLifetime = true,
-        //        ValidateIssuerSigningKey = true,
-        //        ValidIssuer = jwtSettings?.Issuer,
-        //        ValidAudience = jwtSettings?.Audience,
-        //        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.Key!))
-        //    };
-        //});
+        var jwtSettings = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>();
+
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        }).AddJwtBearer(options =>
+        {
+            options.SaveToken = true;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtSettings?.Issuer,
+                ValidAudience = jwtSettings?.Audience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.Key!))
+            };
+        });
 
         return services;
     }

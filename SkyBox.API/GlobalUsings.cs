@@ -7,5 +7,7 @@ global using SkyBox.API.Contracts;
 global using SkyBox.API.Contracts.Common;
 global using SkyBox.API.Abstractions;
 global using SkyBox.API.Errors;
+global using SkyBox.API.Contracts.Auth;
+
 
 
