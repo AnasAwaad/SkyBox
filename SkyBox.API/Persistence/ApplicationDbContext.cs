@@ -11,6 +11,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
     public DbSet<UploadedFile> Files { get; set; }
     public DbSet<Folder> Folders { get; set; }
+    public DbSet<SharedLink> SharedLinks { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

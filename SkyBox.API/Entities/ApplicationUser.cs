@@ -1,6 +1,4 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using System.Numerics;
-using System.Reflection.Metadata.Ecma335;
 
 namespace SkyBox.API.Entities;
 
@@ -20,4 +18,5 @@ public class ApplicationUser : IdentityUser
 
     public ICollection<UploadedFile> Files { get; set; } = [];
     public ICollection<Folder> Folders { get; set; } = [];
+    public ICollection<SharedLink> SharedLinks { get; set; } = [];
 }

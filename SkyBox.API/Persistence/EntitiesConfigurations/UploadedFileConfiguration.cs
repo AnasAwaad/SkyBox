@@ -2,7 +2,7 @@
 
 namespace SkyBox.API.Persistence.EntitiesConfigurations;
 
-public class UploadedFileConfigurations : IEntityTypeConfiguration<UploadedFile>
+public class UploadedFileConfiguration : IEntityTypeConfiguration<UploadedFile>
 {
     public void Configure(EntityTypeBuilder<UploadedFile> builder)
     {

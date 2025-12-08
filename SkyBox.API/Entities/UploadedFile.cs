@@ -20,4 +20,6 @@ public class UploadedFile
     //public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public bool IsFavorite { get; set; } = false;
     public DateTime? DeletedAt { get; set; }
+
+    public ICollection<SharedLink> SharedLinks { get; set; } = [];
 }
