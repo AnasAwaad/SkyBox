@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using SkyBox.API.Authentication;
 using SkyBox.API.Errors;
 using SkyBox.API.Persistence;
@@ -81,6 +82,31 @@ public static class DependencyInjection
     private static IServiceCollection AddAuthConfigurations(this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.AddSwaggerGen(c =>
+        {
+            // Add JWT button to Swagger
+            c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+            });
+
+            // Apply Bearer token to all operations
+            c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        []
+                    }
+                });
+        });
 
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>
         {

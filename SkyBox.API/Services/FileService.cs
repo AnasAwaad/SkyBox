@@ -11,10 +11,10 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
     private readonly string _filesPath = $"{webHostEnvironment.WebRootPath}/uploads";
 
 
-    public async Task<Result<PaginatedList<FileListItemResponse>>> GetFilesAsync(RequestFilters filters, CancellationToken cancellationToken = default)
+    public async Task<Result<PaginatedList<FileListItemResponse>>> GetFilesAsync(RequestFilters filters,string userId, CancellationToken cancellationToken = default)
     {
         var query = dbContext.Files
-            .Where(x => x.DeletedAt == null)
+            .Where(x => x.DeletedAt == null && x.OwnerId == userId)
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(filters.SearchValue))
@@ -33,18 +33,20 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
 
     }
 
-    public async Task<Result<FileUploadResponse>> UploadAsync(IFormFile file,Guid? folderId = null, CancellationToken cancellationToken = default)
+    public async Task<Result<FileUploadResponse>> UploadAsync(IFormFile file,string userId, Guid? folderId = null, CancellationToken cancellationToken = default)
     {
 
         if(folderId is not null)
         {
-            var folder = await dbContext.Folders.FindAsync(folderId);
+            var folder = await dbContext.Folders
+                .FirstOrDefaultAsync(f => f.Id == folderId && f.OwnerId == userId, cancellationToken);
+
 
             if (folder is null)
                 return Result.Failure<FileUploadResponse>(FolderErrors.FolderNotFound);
         }
 
-        var uploadedFile = await SaveFileAsync(file,folderId, cancellationToken);
+        var uploadedFile = await SaveFileAsync(file,userId,folderId, cancellationToken);
 
         await dbContext.AddAsync(uploadedFile, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -52,11 +54,12 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
         return Result.Success(uploadedFile.Adapt<FileUploadResponse>());
     }
 
-    public async Task<Result<IEnumerable<FileUploadResponse>>> UploadManyAsync(IFormFileCollection files, Guid? folderId = null, CancellationToken cancellationToken = default)
+    public async Task<Result<IEnumerable<FileUploadResponse>>> UploadManyAsync(IFormFileCollection files,string userId, Guid? folderId = null, CancellationToken cancellationToken = default)
     {
         if (folderId is not null)
         {
-            var folder = await dbContext.Folders.FindAsync(folderId);
+            var folder = await dbContext.Folders
+                .FirstOrDefaultAsync(f => f.Id == folderId && f.OwnerId == userId, cancellationToken);
 
             if (folder is null)
                 return Result.Failure<IEnumerable<FileUploadResponse>>(FolderErrors.FolderNotFound);
@@ -67,7 +70,7 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
 
         foreach (var file in files)
         {
-            uploadedFiles.Add(await SaveFileAsync(file,folderId, cancellationToken));
+            uploadedFiles.Add(await SaveFileAsync(file,userId,folderId, cancellationToken));
         }
 
         await dbContext.AddRangeAsync(uploadedFiles, cancellationToken);
@@ -77,9 +80,10 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
     }
 
 
-    public async Task<Result<FileContentDto>> DownloadAsync(Guid fileId, CancellationToken cancellationToken = default)
+    public async Task<Result<FileContentDto>> DownloadAsync(Guid fileId,string userId, CancellationToken cancellationToken = default)
     {
-        var file = await dbContext.Files.FindAsync(fileId);
+        var file = await dbContext.Files
+            .FirstOrDefaultAsync(f => f.Id == fileId && f.OwnerId == userId, cancellationToken);
 
         if (file == null || file.DeletedAt != null)
             return Result.Failure<FileContentDto>(FileErrors.FileNotFound);
@@ -104,9 +108,10 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
 
     }
 
-    public async Task<Result<StreamContentDto>> StreamAsync(Guid fileId, CancellationToken cancellationToken = default)
+    public async Task<Result<StreamContentDto>> StreamAsync(Guid fileId,string userId, CancellationToken cancellationToken = default)
     {
-        var file = await dbContext.Files.FindAsync(fileId);
+        var file = await dbContext.Files
+            .FirstOrDefaultAsync(f => f.Id == fileId && f.OwnerId == userId, cancellationToken);
 
         if (file == null || file.DeletedAt != null)
             return Result.Failure<StreamContentDto>(FileErrors.FileNotFound);
@@ -125,9 +130,11 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
         return Result.Success(result);
     }
 
-    public async Task<Result> DeleteAsync(Guid fileId, CancellationToken cancellationToken = default)
+    public async Task<Result> DeleteAsync(Guid fileId,string userId, CancellationToken cancellationToken = default)
     {
-        var file = await dbContext.Files.FindAsync(fileId);
+        var file = await dbContext.Files
+            .FirstOrDefaultAsync(x => x.Id == fileId && x.OwnerId == userId, cancellationToken);
+
 
         if (file == null || file.DeletedAt != null)
             return Result.Failure<StreamContentDto>(FileErrors.FileNotFound);
@@ -140,7 +147,7 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
         return Result.Success();
     }
 
-    private async Task<UploadedFile> SaveFileAsync(IFormFile file,Guid? folderId, CancellationToken cancellationToken = default)
+    private async Task<UploadedFile> SaveFileAsync(IFormFile file,string userId, Guid? folderId, CancellationToken cancellationToken = default)
     {
         var randomFileName = Path.GetRandomFileName();
 
@@ -152,7 +159,8 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
             FileExtension = Path.GetExtension(file.FileName),
             Size = file.Length,
             UploadedAt = DateTime.UtcNow,
-            FolderId = folderId
+            FolderId = folderId,
+            OwnerId = userId
         };
 
         var path = Path.Combine(_filesPath, randomFileName);

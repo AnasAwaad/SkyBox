@@ -7,8 +7,8 @@ public class Folder
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = string.Empty;
 
-    public string? OwnerId { get; set; }
-    public ApplicationUser? Owner { get; set; }
+    public string OwnerId { get; set; } = string.Empty;
+    public ApplicationUser Owner { get; set; } = default!;
 
     public Guid? ParentId { get; set; }
     public Folder? Parent { get; set; }

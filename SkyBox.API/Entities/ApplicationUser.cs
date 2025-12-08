@@ -17,4 +17,7 @@ public class ApplicationUser : IdentityUser
     public string? SuspendedBy { get; set; }
     public long StorageQuotaBytes { get; set; } = 10737418240; // 10GB
     public long UsedStorageBytes { get; set; } = 0;
+
+    public ICollection<UploadedFile> Files { get; set; } = [];
+    public ICollection<Folder> Folders { get; set; } = [];
 }

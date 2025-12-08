@@ -10,8 +10,8 @@ public class UploadedFile
     public long Size { get; set; }
     public DateTime UploadedAt { get; set; }
 
-    //public string OwnerId { get; set; } = string.Empty;
-    //public ApplicationUser Owner { get; set; } = default!;
+    public string OwnerId { get; set; } = string.Empty;
+    public ApplicationUser Owner { get; set; } = default!;
 
     public Guid? FolderId { get; set; }
     public Folder? Folder { get; set; }
