@@ -15,7 +15,7 @@ namespace SkyBox.API.Migrations
                 name: "SharedLinks",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", maxLength: 100, nullable: false),
                     FileId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     OwnerId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Token = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
@@ -26,18 +26,11 @@ namespace SkyBox.API.Migrations
                     Views = table.Column<int>(type: "int", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     Permission = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
-                    UploadedFileId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    PasswordHash = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_SharedLinks", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_SharedLinks_AspNetUsers_ApplicationUserId",
-                        column: x => x.ApplicationUserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_SharedLinks_AspNetUsers_OwnerId",
                         column: x => x.OwnerId,
@@ -50,11 +43,6 @@ namespace SkyBox.API.Migrations
                         principalTable: "Files",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_SharedLinks_Files_UploadedFileId",
-                        column: x => x.UploadedFileId,
-                        principalTable: "Files",
-                        principalColumn: "Id");
                 });
 
             migrationBuilder.UpdateData(
@@ -62,19 +50,14 @@ namespace SkyBox.API.Migrations
                 keyColumn: "Id",
                 keyValue: "4039BABA-A259-47DB-8FA5-D8CFF40BCBD9",
                 column: "PasswordHash",
-                value: "AQAAAAIAAYagAAAAECq6GivoIj4DRErU2l6BLdrTJaQ1/mvxxofSciIPxC60e9krdSU6fZ01s7w5F8JLDw==");
+                value: "AQAAAAIAAYagAAAAENHrhU7OzP2gi9FP8nERAXE5V1L52zxVXCjLf7ksRO+8QsrRj3Gx7xJ/o6VZh9CUjQ==");
 
             migrationBuilder.UpdateData(
                 table: "AspNetUsers",
                 keyColumn: "Id",
                 keyValue: "C1CB8E63-754C-4963-AFC0-B766711FAB0E",
                 column: "PasswordHash",
-                value: "AQAAAAIAAYagAAAAEHLMeUdmlsRF0XWHKnxpZZHhKCfSG1yddnX5pC80eo+FochYSvwXzqaKNLVPz6zjFw==");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_SharedLinks_ApplicationUserId",
-                table: "SharedLinks",
-                column: "ApplicationUserId");
+                value: "AQAAAAIAAYagAAAAEJPYFQe26PX+UqP3hC2fKsIh2WX7a8Al0O0zYwAkauvlZCCEIgHcTdN22VTYzO2HtQ==");
 
             migrationBuilder.CreateIndex(
                 name: "IX_SharedLinks_FileId",
@@ -91,11 +74,6 @@ namespace SkyBox.API.Migrations
                 table: "SharedLinks",
                 column: "Token",
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_SharedLinks_UploadedFileId",
-                table: "SharedLinks",
-                column: "UploadedFileId");
         }
 
         /// <inheritdoc />

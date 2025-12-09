@@ -46,6 +46,8 @@ public static class DependencyInjection
         services.AddScoped<IFileService, FileService>();
         services.AddScoped<ITrashService, TrashService>();
         services.AddScoped<IFolderService, FolderService>();
+        services.AddScoped<ISharedLinkService, SharedLinkService>();
+
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtProvider, JwtProvider>();
         services.AddScoped<IEmailSender, EmailService>();

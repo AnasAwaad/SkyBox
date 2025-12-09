@@ -1,0 +1,10 @@
+﻿using SkyBox.API.Contracts.SharedLink;
+
+namespace SkyBox.API.Services;
+
+public interface ISharedLinkService
+{
+    Task<Result<SharedLinkResponse>> CreateSharedLinkAsync(Guid fileId,string ownerId, CreateSharedLinkRequest request, CancellationToken cancellationToken = default);
+    Task<Result<FileContentDto>> DownloadByTokenAsync(string token, CancellationToken cancellationToken = default);
+    Task<Result<SharedLinkPublicInfoResponse>> GetInfoByTokenAsync(string token, CancellationToken cancellationToken = default);
+}

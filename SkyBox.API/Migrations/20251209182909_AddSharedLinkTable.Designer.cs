@@ -12,7 +12,7 @@ using SkyBox.API.Persistence;
 namespace SkyBox.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251208143033_AddSharedLinkTable")]
+    [Migration("20251209182909_AddSharedLinkTable")]
     partial class AddSharedLinkTable
     {
         /// <inheritdoc />
@@ -309,7 +309,7 @@ namespace SkyBox.API.Migrations
                             LockoutEnabled = false,
                             NormalizedEmail = "ADMIN@GMAIL.COM",
                             NormalizedUserName = "ADMIN@GMAIL.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEHLMeUdmlsRF0XWHKnxpZZHhKCfSG1yddnX5pC80eo+FochYSvwXzqaKNLVPz6zjFw==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEJPYFQe26PX+UqP3hC2fKsIh2WX7a8Al0O0zYwAkauvlZCCEIgHcTdN22VTYzO2HtQ==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "F21B247ED97440039BBF0BB7F2EA7363",
                             StorageQuotaBytes = 10737418240L,
@@ -332,7 +332,7 @@ namespace SkyBox.API.Migrations
                             LockoutEnabled = false,
                             NormalizedEmail = "USER@GMAIL.COM",
                             NormalizedUserName = "USER@GMAIL.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAECq6GivoIj4DRErU2l6BLdrTJaQ1/mvxxofSciIPxC60e9krdSU6fZ01s7w5F8JLDw==",
+                            PasswordHash = "AQAAAAIAAYagAAAAENHrhU7OzP2gi9FP8nERAXE5V1L52zxVXCjLf7ksRO+8QsrRj3Gx7xJ/o6VZh9CUjQ==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "B92157CE0AE54FB3A56AAFF531F6FF7A",
                             StorageQuotaBytes = 10737418240L,
@@ -382,12 +382,10 @@ namespace SkyBox.API.Migrations
 
             modelBuilder.Entity("SkyBox.API.Entities.SharedLink", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("ApplicationUserId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -425,15 +423,10 @@ namespace SkyBox.API.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<Guid?>("UploadedFileId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<int>("Views")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ApplicationUserId");
 
                     b.HasIndex("FileId");
 
@@ -441,8 +434,6 @@ namespace SkyBox.API.Migrations
 
                     b.HasIndex("Token")
                         .IsUnique();
-
-                    b.HasIndex("UploadedFileId");
 
                     b.ToTable("SharedLinks");
                 });
@@ -571,25 +562,17 @@ namespace SkyBox.API.Migrations
 
             modelBuilder.Entity("SkyBox.API.Entities.SharedLink", b =>
                 {
-                    b.HasOne("SkyBox.API.Entities.ApplicationUser", null)
-                        .WithMany("SharedLinks")
-                        .HasForeignKey("ApplicationUserId");
-
                     b.HasOne("SkyBox.API.Entities.UploadedFile", "File")
-                        .WithMany()
+                        .WithMany("SharedLinks")
                         .HasForeignKey("FileId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SkyBox.API.Entities.ApplicationUser", "Owner")
-                        .WithMany()
+                        .WithMany("SharedLinks")
                         .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("SkyBox.API.Entities.UploadedFile", null)
-                        .WithMany("SharedLinks")
-                        .HasForeignKey("UploadedFileId");
 
                     b.Navigation("File");
 

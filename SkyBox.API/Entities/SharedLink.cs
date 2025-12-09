@@ -2,8 +2,7 @@
 
 public class SharedLink
 {
-    public string Id { get; set; } = string.Empty;
-
+    public Guid Id { get; set; }
     public Guid FileId { get; set; }
     public UploadedFile File { get; set; } = default!;
 
@@ -18,7 +17,7 @@ public class SharedLink
     public int Downloads { get; set; } = 0;
     public int Views { get; set; } = 0;
     public bool IsActive { get; set; } = true;
-    public string Permission { get; set; } = "read";
+    public string Permission { get; set; } = "view";
 
     public string? PasswordHash { get; set; }
 }

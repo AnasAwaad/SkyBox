@@ -33,12 +33,12 @@ public class SharedLinkConfiguration : IEntityTypeConfiguration<SharedLink>
         // Relations
 
         builder.HasOne(x => x.File)
-            .WithMany()
+            .WithMany(x=>x.SharedLinks)
             .HasForeignKey(x => x.FileId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(x => x.Owner)
-            .WithMany() 
+            .WithMany(x=>x.SharedLinks) 
             .HasForeignKey(x => x.OwnerId)
             .OnDelete(DeleteBehavior.Cascade);
 
