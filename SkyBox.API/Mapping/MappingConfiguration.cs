@@ -1,4 +1,5 @@
 ﻿using SkyBox.API.Contracts.Folder;
+using SkyBox.API.Contracts.SharedLink;
 
 namespace SkyBox.API.Mapping;
 
@@ -19,5 +20,10 @@ public class MappingConfiguration : IRegister
 
         config.NewConfig<RegisterRequest, ApplicationUser>()
             .Map(dest => dest.UserName, src => src.Email);
+
+
+        config.NewConfig<SharedLink, SharedLinkResponse>()
+            .Map(dest => dest.FileName, src => src.File.FileName)
+            .Map(dest => dest.FileSize, src => src.File.Size);
     }
 }

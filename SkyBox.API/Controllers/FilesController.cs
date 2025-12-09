@@ -56,7 +56,7 @@ public class FilesController(IFileService fileService) : ControllerBase
         var result = await fileService.StreamAsync(id,userId, cancellationToken);
 
         return result.IsSuccess ?
-            File(result.Value.Stream, result.Value.ContentType, result.Value.FileName) :
+            File(result.Value.Stream, result.Value.ContentType, result.Value.FileName,enableRangeProcessing:true) :
             result.ToProblem();
     }
 

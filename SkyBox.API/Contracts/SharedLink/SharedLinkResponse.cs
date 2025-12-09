@@ -9,5 +9,5 @@ public class SharedLinkResponse
     public DateTime? ExpiresAt { get; set; }
     public int Downloads { get; set; }
     public int Views { get; set; }
-    public string Url { get; set; } = string.Empty;
+    public string Token { get; set; } = string.Empty;
 }
