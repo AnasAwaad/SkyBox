@@ -11,5 +11,5 @@ global using SkyBox.API.Contracts.Auth;
 global using SkyBox.API.Extensions;
 global using Microsoft.AspNetCore.Authorization;
 global using SkyBox.API.Abstractions.Consts;
-
-
+global using SkyBox.API.Enums;
+global using SkyBox.API.Persistence;

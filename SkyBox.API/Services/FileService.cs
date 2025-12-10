@@ -1,11 +1,9 @@
-﻿
-using SkyBox.API.Errors;
-using SkyBox.API.Persistence;
-using System.Linq.Dynamic.Core;
+﻿using System.Linq.Dynamic.Core;
 
 namespace SkyBox.API.Services;
 
-public class FileService(IWebHostEnvironment webHostEnvironment,
+public class FileService(IStorageQuotaService storageQuotaService,
+    IWebHostEnvironment webHostEnvironment,
     ApplicationDbContext dbContext) : IFileService
 {
     private readonly string _filesPath = $"{webHostEnvironment.WebRootPath}/uploads";
@@ -18,7 +16,7 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(filters.SearchValue))
-            query = query.Where(x => x.FileName.Contains(filters.SearchValue.ToLower()));
+            query = query.Where(x => x.FileName.Contains(filters.SearchValue, StringComparison.CurrentCultureIgnoreCase));
 
         if (!string.IsNullOrEmpty(filters.SortColumn))
             query = query.OrderBy($"{filters.SortColumn} {filters.SortDirection}");
@@ -35,17 +33,23 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
 
     public async Task<Result<FileUploadResponse>> UploadAsync(IFormFile file,string userId, Guid? folderId = null, CancellationToken cancellationToken = default)
     {
+        // Validate file
+        if (file is null || file.Length <= 0)
+            return Result.Failure<FileUploadResponse>(FileErrors.EmptyFile);
 
-        if(folderId is not null)
-        {
-            var folder = await dbContext.Folders
-                .FirstOrDefaultAsync(f => f.Id == folderId && f.OwnerId == userId, cancellationToken);
+        
+        // Validate folder ownership
+        var folderResult = await EnsureFolderBelongsToUserAsync(folderId, userId, cancellationToken);
+        if (folderResult.IsFailure)
+            return Result.Failure<FileUploadResponse>(folderResult.Error);
 
 
-            if (folder is null)
-                return Result.Failure<FileUploadResponse>(FolderErrors.FolderNotFound);
-        }
+        // Check storage quota
+        var canUpload = await storageQuotaService.CanUploadFileAsync(userId, file.Length, cancellationToken);
+        if (!canUpload)
+            return Result.Failure<FileUploadResponse>(FileErrors.StorageQuotaExceeded);
 
+        // Save file
         var uploadedFile = await SaveFileAsync(file,userId,folderId, cancellationToken);
 
         await dbContext.AddAsync(uploadedFile, cancellationToken);
@@ -56,16 +60,30 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
 
     public async Task<Result<IEnumerable<FileUploadResponse>>> UploadManyAsync(IFormFileCollection files,string userId, Guid? folderId = null, CancellationToken cancellationToken = default)
     {
-        if (folderId is not null)
-        {
-            var folder = await dbContext.Folders
-                .FirstOrDefaultAsync(f => f.Id == folderId && f.OwnerId == userId, cancellationToken);
+        // Validate files
+        if (files is null || files.Count == 0)
+            return Result.Failure<IEnumerable<FileUploadResponse>>(FileErrors.NoFilesProvided);
 
-            if (folder is null)
-                return Result.Failure<IEnumerable<FileUploadResponse>>(FolderErrors.FolderNotFound);
+        // Filter out empty files
+        var nonEmptyFiles = files.Where(f => f is not null && f.Length > 0).ToList();
+        if (!nonEmptyFiles.Any())
+            return Result.Failure<IEnumerable<FileUploadResponse>>(FileErrors.EmptyFilesOnly);
 
-        }
 
+        // Validate folder ownership 
+        var folderResult = await EnsureFolderBelongsToUserAsync(folderId, userId, cancellationToken);
+        if (folderResult.IsFailure)
+            return Result.Failure<IEnumerable<FileUploadResponse>>(folderResult.Error);
+
+
+        // Check storage quota
+        var totalSize = files.Sum(x=>x.Length);
+        var canUpload = await storageQuotaService.CanUploadFileAsync(userId, totalSize, cancellationToken);
+
+        if (!canUpload)
+            return Result.Failure<IEnumerable<FileUploadResponse>>(FileErrors.StorageQuotaExceeded);
+
+        // Save all files
         List<UploadedFile> uploadedFiles = [];
 
         foreach (var file in files)
@@ -168,5 +186,24 @@ public class FileService(IWebHostEnvironment webHostEnvironment,
         await file.CopyToAsync(stream, cancellationToken);
 
         return uploadedFile;
+    }
+
+
+    /// <summary>
+    /// Validates that the folder exists and belongs to the given user.
+    /// If folderId is null, returns success immediately.
+    /// </summary>
+    private async Task<Result> EnsureFolderBelongsToUserAsync(Guid? folderId, string userId,CancellationToken cancellationToken = default)
+    {
+        if(folderId is null)
+            return Result.Success();
+
+        var folder = await dbContext.Folders
+                .FirstOrDefaultAsync(f => f.Id == folderId && f.OwnerId == userId, cancellationToken);
+
+        if (folder is null)
+            return Result.Failure<FileUploadResponse>(FolderErrors.FolderNotFound);
+
+        return Result.Success();
     }
 }

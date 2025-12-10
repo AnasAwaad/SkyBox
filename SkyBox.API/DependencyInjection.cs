@@ -47,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<ITrashService, TrashService>();
         services.AddScoped<IFolderService, FolderService>();
         services.AddScoped<ISharedLinkService, SharedLinkService>();
+        services.AddScoped<IStorageQuotaService, StorageQuotaService>();
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtProvider, JwtProvider>();

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using SkyBox.API.Enums;
 
 namespace SkyBox.API.Entities;
 
@@ -13,9 +14,7 @@ public class ApplicationUser : IdentityUser
     public DateTime? SuspendedAt { get; set; }
     public string? SuspendedReason { get; set; }
     public string? SuspendedBy { get; set; }
-    public long StorageQuotaBytes { get; set; } = 10737418240; // 10GB
-    public long UsedStorageBytes { get; set; } = 0;
-
+    public SubscriptionPlan SubscriptionPlan { get; set; } = SubscriptionPlan.Free;
     public ICollection<UploadedFile> Files { get; set; } = [];
     public ICollection<Folder> Folders { get; set; } = [];
     public ICollection<SharedLink> SharedLinks { get; set; } = [];

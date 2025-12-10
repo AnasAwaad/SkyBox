@@ -2,7 +2,11 @@
 
 public static class FileErrors
 {
-    public static readonly Error FileNotFound = new("File.NotFound", "No file was found with the given Id", StatusCodes.Status404NotFound);
-    public static readonly Error FileExpired = new("File.Expired", "File can no longer be restored (expired from trash).", StatusCodes.Status400BadRequest);
+    public static readonly Error FileNotFound = new("File.NotFound", "The requested file does not exist or you don't have access to it.", StatusCodes.Status404NotFound);
+    public static readonly Error FileExpired = new("File.Expired", "The file can no longer be restored because its retention period has expired.", StatusCodes.Status400BadRequest);
+    public static readonly Error StorageQuotaExceeded = new("File.StorageQuotaExceeded", "Cannot upload the file because it exceeds your current storage plan. Please delete files or upgrade your subscription.", StatusCodes.Status400BadRequest);
+    public static readonly Error EmptyFile = new("File.EmptyFile", "The uploaded file is empty. Please provide a valid file.", StatusCodes.Status400BadRequest);
+    public static readonly Error NoFilesProvided = new("File.NoFilesProvided", "No files were provided for upload. Please attach at least one file.", StatusCodes.Status400BadRequest);
+    public static readonly Error EmptyFilesOnly = new("File.EmptyFilesOnly", "All provided files are empty. Please upload at least one non-empty file.", StatusCodes.Status400BadRequest);
 }
 

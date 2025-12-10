@@ -24,7 +24,8 @@ public class UserConfiguration : IEntityTypeConfiguration<ApplicationUser>
             ConcurrencyStamp = DefaultUsers.AdminConcurrencyStamp,
             SecurityStamp = DefaultUsers.AdminSecurityStamp,
             EmailConfirmed = true,
-            PasswordHash = passwordHasher.HashPassword(null!, DefaultUsers.AdminPassword)
+            PasswordHash = passwordHasher.HashPassword(null!, DefaultUsers.AdminPassword),
+            SubscriptionPlan = SubscriptionPlan.Business
         });
 
         builder.HasData(new ApplicationUser
