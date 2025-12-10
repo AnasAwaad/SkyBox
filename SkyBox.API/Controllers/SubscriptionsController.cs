@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SkyBox.API.Contracts.Subscription;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace SkyBox.API.Controllers;
@@ -18,6 +19,20 @@ public class SubscriptionsController(ISubscriptionService subscriptionService) :
         var result =await subscriptionService.ChangeUserPlan(request.UserId, request.Plan, cancellationToken);
 
         return result.IsSuccess ? Ok() : result.ToProblem();
+    }
+
+    /// <summary>
+    /// Get current user's subscription plan and storage usage.
+    /// </summary>
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<IActionResult> GetMySubscriptionInfo(CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+
+        var info = await subscriptionService.GetMySubscriptionInfo(userId, cancellationToken);
+
+        return Ok(info);
     }
 
 }
