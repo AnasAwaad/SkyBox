@@ -16,7 +16,7 @@ public class FoldersController(IFolderService folderService) : ControllerBase
 
         var result = await folderService.CreateFolderAsync(request,userId, cancellationToken);
         return result.IsSuccess ?
-            Created() :
+            CreatedAtAction(nameof(GetFolderContent), new { id = result.Value.Id }, result.Value) :
             result.ToProblem();
     }
 

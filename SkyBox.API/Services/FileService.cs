@@ -1,8 +1,11 @@
-﻿using System.Linq.Dynamic.Core;
+﻿using Microsoft.EntityFrameworkCore;
+using SkyBox.API.Contracts.FileVersion;
+using System.Linq.Dynamic.Core;
 
 namespace SkyBox.API.Services;
 
 public class FileService(IStorageQuotaService storageQuotaService,
+    IFileVersionService fileVersionService,
     IWebHostEnvironment webHostEnvironment,
     ApplicationDbContext dbContext) : IFileService
 {
@@ -49,13 +52,18 @@ public class FileService(IStorageQuotaService storageQuotaService,
         if (!canUpload)
             return Result.Failure<FileUploadResponse>(FileErrors.StorageQuotaExceeded);
 
-        // Save file
-        var uploadedFile = await SaveFileAsync(file,userId,folderId, cancellationToken);
+        var saveResult = await SaveOrCreateVersionAsync(file, userId, folderId, cancellationToken);
 
-        await dbContext.AddAsync(uploadedFile, cancellationToken);
+        if (saveResult.IsFailure)
+            return Result.Failure<FileUploadResponse>(saveResult.Error);
+
+        if (saveResult.Value.AlreadyPersisted)
+            return Result.Success(saveResult.Value.File.Adapt<FileUploadResponse>());
+
+        await dbContext.AddAsync(saveResult.Value.File, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return Result.Success(uploadedFile.Adapt<FileUploadResponse>());
+        return Result.Success(saveResult.Value.File.Adapt<FileUploadResponse>());
     }
 
     public async Task<Result<IEnumerable<FileUploadResponse>>> UploadManyAsync(IFormFileCollection files,string userId, Guid? folderId = null, CancellationToken cancellationToken = default)
@@ -85,16 +93,35 @@ public class FileService(IStorageQuotaService storageQuotaService,
 
         // Save all files
         List<UploadedFile> uploadedFiles = [];
+        var responses = new List<FileUploadResponse>();
 
         foreach (var file in files)
         {
-            uploadedFiles.Add(await SaveFileAsync(file,userId,folderId, cancellationToken));
+            var saveResult = await SaveOrCreateVersionAsync(file, userId, folderId, cancellationToken);
+
+
+            if (saveResult.IsFailure)
+                return Result.Failure<IEnumerable<FileUploadResponse>>(saveResult.Error);
+
+            // version created & persisted by FileVersionService
+            if (saveResult.Value.AlreadyPersisted)
+            {
+                responses.Add(saveResult.Value.File.Adapt<FileUploadResponse>());
+                continue;
+            }
+
+            // new file
+            uploadedFiles.Add(saveResult.Value.File);
+            responses.Add(saveResult.Value.File.Adapt<FileUploadResponse>());
         }
 
-        await dbContext.AddRangeAsync(uploadedFiles, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        if (uploadedFiles.Any())
+        {
+            await dbContext.AddRangeAsync(uploadedFiles, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
 
-        return Result.Success(uploadedFiles.Adapt<IEnumerable<FileUploadResponse>>());
+        return Result.Success(responses.AsEnumerable());
     }
 
 
@@ -165,30 +192,6 @@ public class FileService(IStorageQuotaService storageQuotaService,
         return Result.Success();
     }
 
-    private async Task<UploadedFile> SaveFileAsync(IFormFile file,string userId, Guid? folderId, CancellationToken cancellationToken = default)
-    {
-        var randomFileName = Path.GetRandomFileName();
-
-        var uploadedFile = new UploadedFile
-        {
-            FileName = file.FileName,
-            StoredFileName = randomFileName,
-            ContentType = file.ContentType,
-            FileExtension = Path.GetExtension(file.FileName),
-            Size = file.Length,
-            UploadedAt = DateTime.UtcNow,
-            FolderId = folderId,
-            OwnerId = userId
-        };
-
-        var path = Path.Combine(_filesPath, randomFileName);
-        using var stream = File.Create(path);
-        await file.CopyToAsync(stream, cancellationToken);
-
-        return uploadedFile;
-    }
-
-
     /// <summary>
     /// Validates that the folder exists and belongs to the given user.
     /// If folderId is null, returns success immediately.
@@ -205,5 +208,49 @@ public class FileService(IStorageQuotaService storageQuotaService,
             return Result.Failure<FileUploadResponse>(FolderErrors.FolderNotFound);
 
         return Result.Success();
+    }
+
+
+    /// <summary>
+    /// Creates a new file or generates a new version if the file already exists.
+    /// Returns the file and a flag indicating whether it was already persisted.
+    /// </summary>
+    private async Task<Result<SaveOrVersionResult>> SaveOrCreateVersionAsync(IFormFile file,string userId,Guid? folderId,CancellationToken cancellationToken = default)
+    {
+        // find existing file in same folder with same name
+        var existingFile = await dbContext.Files
+            .FirstOrDefaultAsync(f =>
+                f.OwnerId == userId &&
+                f.FolderId == folderId &&
+                f.FileName == file.FileName &&
+                f.DeletedAt == null,
+                cancellationToken);
+
+        if (existingFile is not null)
+        {
+            // create version via FileVersionService
+            var versionResult = await fileVersionService.SaveNewVersionAsync(existingFile, file, userId, cancellationToken);
+            if (versionResult.IsFailure)
+                return Result.Failure<SaveOrVersionResult>(versionResult.Error);
+
+            return Result.Success(new SaveOrVersionResult(versionResult.Value, true));
+        }
+
+        // store to storage and return UploadedFile
+        var storedFileName = await storageQuotaService.UploadFileAsync(file, cancellationToken);
+
+        var uploadedFile = new UploadedFile
+        {
+            FileName = file.FileName,
+            StoredFileName = storedFileName,
+            ContentType = file.ContentType ,
+            FileExtension = Path.GetExtension(file.FileName),
+            Size = file.Length,
+            UploadedAt = DateTime.UtcNow,
+            FolderId = folderId,
+            OwnerId = userId
+        };
+
+        return Result.Success(new SaveOrVersionResult(uploadedFile, false));
     }
 }

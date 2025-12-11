@@ -8,5 +8,6 @@ public static class FileErrors
     public static readonly Error EmptyFile = new("File.EmptyFile", "The uploaded file is empty. Please provide a valid file.", StatusCodes.Status400BadRequest);
     public static readonly Error NoFilesProvided = new("File.NoFilesProvided", "No files were provided for upload. Please attach at least one file.", StatusCodes.Status400BadRequest);
     public static readonly Error EmptyFilesOnly = new("File.EmptyFilesOnly", "All provided files are empty. Please upload at least one non-empty file.", StatusCodes.Status400BadRequest);
+    public static readonly Error VersioningNotAllowed = new("File.VersioningNotAllowed", "Versioning is available for Business plan only.", StatusCodes.Status403Forbidden);
 }
 

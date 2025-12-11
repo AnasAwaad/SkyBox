@@ -8,7 +8,7 @@ namespace SkyBox.API.Services;
 
 public class FolderService(ApplicationDbContext dbContext) : IFolderService
 {
-    public async Task<Result> CreateFolderAsync(FolderRequest request, string userId, CancellationToken cancellationToken)
+    public async Task<Result<FolderResponse>> CreateFolderAsync(FolderRequest request, string userId, CancellationToken cancellationToken)
     {
 
         Guid? parentId = null;
@@ -18,7 +18,7 @@ public class FolderService(ApplicationDbContext dbContext) : IFolderService
             var parentFolder = await dbContext.Folders.FirstOrDefaultAsync(x => x.Id == request.ParentFolderId.Value && x.OwnerId == userId);
 
             if (parentFolder is null)
-                return Result.Failure(FolderErrors.ParentFolderNotFound);
+                return Result.Failure<FolderResponse>(FolderErrors.ParentFolderNotFound);
 
             parentId = parentFolder.Id;
         }
@@ -28,7 +28,7 @@ public class FolderService(ApplicationDbContext dbContext) : IFolderService
             .AnyAsync(x => x.Name.ToLower() == request.Name.ToLower() && x.ParentId == parentId && x.OwnerId == userId,cancellationToken);
 
         if (existingFolder)
-            return Result.Failure(FolderErrors.FolderExists);
+            return Result.Failure<FolderResponse>(FolderErrors.FolderExists);
 
 
         var folder = new Folder
@@ -41,7 +41,7 @@ public class FolderService(ApplicationDbContext dbContext) : IFolderService
         await dbContext.Folders.AddAsync(folder, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return Result.Success();
+        return Result.Success(folder.Adapt<FolderResponse>());
     }
 
     public async Task<Result<PaginatedList<FolderContentResponse>>> GetFolderContentAsync(RequestFilters filters, Guid folderId, string userId, CancellationToken cancellationToken = default)

@@ -22,4 +22,5 @@ public class UploadedFile
     public DateTime? DeletedAt { get; set; }
 
     public ICollection<SharedLink> SharedLinks { get; set; } = [];
+    public ICollection<FileVersion> Versions { get; set; } = [];
 }

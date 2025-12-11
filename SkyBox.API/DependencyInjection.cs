@@ -49,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<ISharedLinkService, SharedLinkService>();
         services.AddScoped<IStorageQuotaService, StorageQuotaService>();
         services.AddScoped<ISubscriptionService, SubscriptionService>();
+        services.AddScoped<IFileVersionService, FileVersionService>();
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtProvider, JwtProvider>();
