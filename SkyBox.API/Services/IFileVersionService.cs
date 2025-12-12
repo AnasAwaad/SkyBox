@@ -14,4 +14,9 @@ public interface IFileVersionService
     /// If file doesn't exist, create new UploadedFile (caller can use SaveNewFileAsync instead).</summary>
     /// </summary>
     Task<Result<UploadedFile>> SaveNewVersionAsync(UploadedFile existingFile,IFormFile newFile,string userId,CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Restore a specific version as the latest.
+    /// </summary>
+    Task<Result> RestoreVersionAsync(Guid fileId, Guid versionId, string userId, CancellationToken cancellationToken = default);
 }

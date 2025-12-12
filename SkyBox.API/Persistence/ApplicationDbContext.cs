@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SkyBox.API.Entities;
@@ -12,6 +13,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UploadedFile> Files { get; set; }
     public DbSet<Folder> Folders { get; set; }
     public DbSet<SharedLink> SharedLinks { get; set; }
+    public DbSet<FileVersion> FileVersions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

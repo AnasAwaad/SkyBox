@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SkyBox.API.Contracts.FileVersion;
+using System.Security.Claims;
 
 namespace SkyBox.API.Controllers;
 [Route("api/files")]
@@ -15,5 +16,13 @@ public class FileVersionsController(IFileVersionService fileVersionService) : Co
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 
+    [HttpPost("{fileId}/versions/{versionId}/restore")]
+    [Authorize]
+    public async Task<IActionResult> RestoreVersion([FromRoute]Guid fileId,[FromRoute] Guid versionId, CancellationToken cancellationToken)
+    {
+        var result = await fileVersionService.RestoreVersionAsync(fileId, versionId, User.GetUserId(), cancellationToken);
+
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
 
 }
