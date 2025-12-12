@@ -25,6 +25,24 @@ public class StorageQuotaService(ApplicationDbContext dbContext,IWebHostEnvironm
         return (usedStorage + fileSizeBytes) <= limitBytes;
     }
 
+    public async Task<byte[]?> DownloadFileAsync(string storedFileName, CancellationToken cancellationToken = default)
+    {
+        var path = Path.Combine(_filesPath, storedFileName);
+
+        if (!File.Exists(path))
+            return null;
+
+
+        MemoryStream memoryStream = new();
+        using FileStream fileStream = new(path, FileMode.Open);
+
+        await fileStream.CopyToAsync(memoryStream, cancellationToken);
+
+        memoryStream.Position = 0;
+
+        return memoryStream.ToArray();
+    }
+
     public Task<long> GetUsedStorageAsync(string userId, CancellationToken cancellationToken = default)
     {
         return dbContext.Files

@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -27,6 +28,19 @@ namespace SkyBox.API.Migrations
                 table: "FileVersions",
                 newName: "IX_FileVersions_FileId");
 
+            migrationBuilder.AddColumn<DateTime>(
+                name: "DeletedAt",
+                table: "FileVersions",
+                type: "datetime2",
+                nullable: true);
+
+            migrationBuilder.AddColumn<bool>(
+                name: "IsDeleted",
+                table: "FileVersions",
+                type: "bit",
+                nullable: false,
+                defaultValue: false);
+
             migrationBuilder.AddPrimaryKey(
                 name: "PK_FileVersions",
                 table: "FileVersions",
@@ -37,14 +51,14 @@ namespace SkyBox.API.Migrations
                 keyColumn: "Id",
                 keyValue: "4039BABA-A259-47DB-8FA5-D8CFF40BCBD9",
                 column: "PasswordHash",
-                value: "AQAAAAIAAYagAAAAEIHql9OY+1mN37EmBY0HcRTXjc2W5mcbYxmshHl4+gQgfvV/R/QuU5Ur/HuejUaOyg==");
+                value: "AQAAAAIAAYagAAAAEIELs/B5flav9+c16E7K8+q9mQQgwHGH8EavdorSLwKzOSonkeujDbIQoj1GmjJyDQ==");
 
             migrationBuilder.UpdateData(
                 table: "AspNetUsers",
                 keyColumn: "Id",
                 keyValue: "C1CB8E63-754C-4963-AFC0-B766711FAB0E",
                 column: "PasswordHash",
-                value: "AQAAAAIAAYagAAAAEMe0UUMe9PpyDFANV1PILq+YuB4zrIsdtszvTOSJ16zeezO644I4Bw68JgLO2+N0Yg==");
+                value: "AQAAAAIAAYagAAAAEAtKG6JMIUrbha0eYH1zVUFS7q/g8tk3DJqoAAp7Lc3Zm1eK2M7k2xPwgYjNRvZuvw==");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_FileVersions_Files_FileId",
@@ -64,6 +78,14 @@ namespace SkyBox.API.Migrations
 
             migrationBuilder.DropPrimaryKey(
                 name: "PK_FileVersions",
+                table: "FileVersions");
+
+            migrationBuilder.DropColumn(
+                name: "DeletedAt",
+                table: "FileVersions");
+
+            migrationBuilder.DropColumn(
+                name: "IsDeleted",
                 table: "FileVersions");
 
             migrationBuilder.RenameTable(

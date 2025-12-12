@@ -1,4 +1,4 @@
-﻿namespace SkyBox.API.Contracts.FileVersion;
+﻿namespace SkyBox.API.Contracts.FileVersions;
 
 public record FileVersionResponse(
     Guid Id,

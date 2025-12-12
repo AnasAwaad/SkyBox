@@ -10,5 +10,7 @@ public static class FileErrors
     public static readonly Error EmptyFilesOnly = new("File.EmptyFilesOnly", "All provided files are empty. Please upload at least one non-empty file.", StatusCodes.Status400BadRequest);
     public static readonly Error VersioningNotAllowed = new("File.VersioningNotAllowed", "Versioning is available for Business plan only.", StatusCodes.Status403Forbidden);
     public static readonly Error Forbidden = new("File.Forbidden", "You are not the owner of this file.", StatusCodes.Status403Forbidden);
+    public static readonly Error StorageMissing = new("File.StorageMissing", "Version file missing from storage.", StatusCodes.Status500InternalServerError);
+    public static readonly Error VersionAlreadyDeleted = new("File.VersionAlreadyDeleted", "File Version is already deleted.", StatusCodes.Status400BadRequest);
 }
 

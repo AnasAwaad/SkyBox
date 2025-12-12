@@ -303,7 +303,7 @@ namespace SkyBox.API.Migrations
                             LockoutEnabled = false,
                             NormalizedEmail = "ADMIN@GMAIL.COM",
                             NormalizedUserName = "ADMIN@GMAIL.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEMe0UUMe9PpyDFANV1PILq+YuB4zrIsdtszvTOSJ16zeezO644I4Bw68JgLO2+N0Yg==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEAtKG6JMIUrbha0eYH1zVUFS7q/g8tk3DJqoAAp7Lc3Zm1eK2M7k2xPwgYjNRvZuvw==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "F21B247ED97440039BBF0BB7F2EA7363",
                             SubscriptionPlan = 2,
@@ -325,7 +325,7 @@ namespace SkyBox.API.Migrations
                             LockoutEnabled = false,
                             NormalizedEmail = "USER@GMAIL.COM",
                             NormalizedUserName = "USER@GMAIL.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEIHql9OY+1mN37EmBY0HcRTXjc2W5mcbYxmshHl4+gQgfvV/R/QuU5Ur/HuejUaOyg==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEIELs/B5flav9+c16E7K8+q9mQQgwHGH8EavdorSLwKzOSonkeujDbIQoj1GmjJyDQ==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "B92157CE0AE54FB3A56AAFF531F6FF7A",
                             SubscriptionPlan = 0,
@@ -352,6 +352,9 @@ namespace SkyBox.API.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
@@ -367,6 +370,9 @@ namespace SkyBox.API.Migrations
                         .IsRequired()
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<long>("Size")
                         .HasColumnType("bigint");

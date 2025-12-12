@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using SkyBox.API.Contracts.FileVersion;
+using SkyBox.API.Contracts.FileVersions;
 using System.Linq.Dynamic.Core;
 
 namespace SkyBox.API.Services;
@@ -133,18 +133,15 @@ public class FileService(IStorageQuotaService storageQuotaService,
         if (file == null || file.DeletedAt != null)
             return Result.Failure<FileContentDto>(FileErrors.FileNotFound);
 
-        var path = Path.Combine(_filesPath, file.StoredFileName);
+        var content = await storageQuotaService.DownloadFileAsync(file.StoredFileName, cancellationToken);
 
-        MemoryStream memoryStream = new();
-        using FileStream fileStream = new(path, FileMode.Open);
+        if(content == null)
+            return Result.Failure<FileContentDto>(FileErrors.StorageMissing);
 
-        await fileStream.CopyToAsync(memoryStream, cancellationToken);
-
-        memoryStream.Position = 0;
 
         var result = new FileContentDto
         {
-            Content = memoryStream.ToArray(),
+            Content = content,
             ContentType = file.ContentType,
             FileName = file.FileName
         };

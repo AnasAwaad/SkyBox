@@ -1,3 +1,3 @@
-﻿namespace SkyBox.API.Contracts.FileVersion;
+﻿namespace SkyBox.API.Contracts.FileVersions;
 
 public record SaveOrVersionResult(UploadedFile File, bool AlreadyPersisted);
