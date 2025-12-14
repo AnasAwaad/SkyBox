@@ -1,4 +1,5 @@
-﻿using SkyBox.API.Contracts.FileVersions;
+﻿using SkyBox.API.Contracts.FileShares;
+using SkyBox.API.Contracts.FileVersions;
 using SkyBox.API.Contracts.Folder;
 using SkyBox.API.Contracts.SharedLink;
 
@@ -34,6 +35,13 @@ public class MappingConfiguration : IRegister
             .Map(dest => dest.FileId, src => src.Id)
             .Map(dest => dest.CreatedAt, src => DateTime.UtcNow)
             .Map(dest => dest.Description, src => $"Version on {DateTime.UtcNow:O}");
-            
+
+        config.NewConfig<FileShare, SharedWithMeResponse>()
+            .Map(dest => dest.FileName, src => src.File.FileName)
+            .Map(dest => dest.Size, src => src.File.Size)
+            .Map(dest => dest.ContentType, src => src.File.ContentType)
+            .Map(dest => dest.OwnerName, src => src.Owner.UserName!)
+            .Map(dest => dest.SharedAt, src => src.CreatedAt);
+
     }
 }

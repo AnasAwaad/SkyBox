@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<IStorageQuotaService, StorageQuotaService>();
         services.AddScoped<ISubscriptionService, SubscriptionService>();
         services.AddScoped<IFileVersionService, FileVersionService>();
+        services.AddScoped<IFileShareService, FileShareService>();
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtProvider, JwtProvider>();
