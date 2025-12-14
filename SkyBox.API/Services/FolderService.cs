@@ -47,15 +47,20 @@ public class FolderService(ApplicationDbContext dbContext) : IFolderService
     public async Task<Result<PaginatedList<FolderContentResponse>>> GetFolderContentAsync(RequestFilters filters, Guid folderId, string userId, CancellationToken cancellationToken = default)
     {
         var folder = await dbContext.Folders
-            .FirstOrDefaultAsync(f => f.Id == folderId && f.OwnerId == userId,cancellationToken);
+            .FirstOrDefaultAsync(f => f.Id == folderId,cancellationToken);
 
         if (folder is null)
             return Result.Failure<PaginatedList<FolderContentResponse>>(FolderErrors.FolderNotFound);
 
+        // Authorization check
+        if (!await CanAccessFolderAsync(folder, userId))
+            return Result.Failure<PaginatedList<FolderContentResponse>>(FolderShareErrors.PermissionDenied);
+
+
         var query = dbContext.Folders
            .Include(x => x.Files)
            .Include(x => x.Folders)
-           .Where(x => x.Id == folderId && x.OwnerId == userId);
+           .Where(x => x.Id == folderId);
 
 
         if (!string.IsNullOrEmpty(filters.SearchValue))
@@ -90,4 +95,35 @@ public class FolderService(ApplicationDbContext dbContext) : IFolderService
 
         return Result.Success();
     }
+
+    private async Task<bool> CanAccessFolderAsync(Folder folder, string userId)
+    {
+        // Owner
+        if (folder.OwnerId == userId)
+            return true;
+
+        // Direct folder share
+        var hasDirectShare = await dbContext.FolderShares.AnyAsync(x =>
+            x.FolderId == folder.Id &&
+            x.SharedWithUserId == userId &&
+            !x.IsRevoked);
+
+        if (hasDirectShare)
+            return true;
+
+        // Inherit from parent folder
+        if (folder.ParentId != null)
+        {
+            var hasParentShare = await dbContext.FolderShares.AnyAsync(x =>
+                x.FolderId == folder.ParentId &&
+                x.SharedWithUserId == userId &&
+                !x.IsRevoked);
+
+            if (hasParentShare)
+                return true;
+        }
+
+        return false;
+    }
+
 }

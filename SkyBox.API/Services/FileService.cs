@@ -128,10 +128,15 @@ public class FileService(IStorageQuotaService storageQuotaService,
     public async Task<Result<FileContentDto>> DownloadAsync(Guid fileId,string userId, CancellationToken cancellationToken = default)
     {
         var file = await dbContext.Files
-            .FirstOrDefaultAsync(f => f.Id == fileId && f.OwnerId == userId, cancellationToken);
+            .FirstOrDefaultAsync(f => f.Id == fileId, cancellationToken);
 
         if (file == null || file.DeletedAt != null)
             return Result.Failure<FileContentDto>(FileErrors.FileNotFound);
+
+        // Authorization check
+        if (!await CanAccessFileAsync(file, userId))
+            return Result.Failure<FileContentDto>(FileShareErrors.PermissionDenied);
+
 
         var content = await storageQuotaService.DownloadFileAsync(file.StoredFileName, cancellationToken);
 
@@ -153,10 +158,14 @@ public class FileService(IStorageQuotaService storageQuotaService,
     public async Task<Result<StreamContentDto>> StreamAsync(Guid fileId,string userId, CancellationToken cancellationToken = default)
     {
         var file = await dbContext.Files
-            .FirstOrDefaultAsync(f => f.Id == fileId && f.OwnerId == userId, cancellationToken);
+            .FirstOrDefaultAsync(f => f.Id == fileId, cancellationToken);
 
         if (file == null || file.DeletedAt != null)
             return Result.Failure<StreamContentDto>(FileErrors.FileNotFound);
+
+        // Authorization check
+        if (!await CanAccessFileAsync(file, userId))
+            return Result.Failure<StreamContentDto>(FileShareErrors.PermissionDenied);
 
         var path = Path.Combine(_filesPath, file.StoredFileName);
 
@@ -250,4 +259,33 @@ public class FileService(IStorageQuotaService storageQuotaService,
 
         return Result.Success(new SaveOrVersionResult(uploadedFile, false));
     }
+
+    private async Task<bool> CanAccessFileAsync(UploadedFile file, string userId)
+    {
+        // Owner of the file
+        if (file.OwnerId == userId)
+            return true;
+
+        // Direct file share
+        var hasFileShare = await dbContext.FileShares
+            .AnyAsync(x => x.FileId == file.Id && x.SharedWithUserId == userId && x.OwnerId == file.OwnerId && !x.IsRevoked);
+
+        if(hasFileShare)
+            return true;
+
+        // Folder share
+        if (file.FolderId != null)
+        {
+            var hasFolderShare = await dbContext.FolderShares.AnyAsync(x =>
+                x.FolderId == file.FolderId &&
+                x.SharedWithUserId == userId &&
+                x.OwnerId == file.OwnerId &&
+                !x.IsRevoked);
+
+            if (hasFolderShare)
+                return true;
+        }
+        return false;
+    }
+
 }
