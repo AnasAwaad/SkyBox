@@ -14,3 +14,4 @@ global using SkyBox.API.Abstractions.Consts;
 global using SkyBox.API.Enums;
 global using SkyBox.API.Persistence;
 global using SkyBox.API.Helpers;
+global using FileShare = SkyBox.API.Entities.FileShare;
