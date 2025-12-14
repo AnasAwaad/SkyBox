@@ -7,11 +7,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SkyBox.API.Authentication;
-using SkyBox.API.Errors;
-using SkyBox.API.Persistence;
-using SkyBox.API.Services;
 using SkyBox.API.Settings;
-using SkyBox.API.Validators;
 using System.Reflection;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -52,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<ISubscriptionService, SubscriptionService>();
         services.AddScoped<IFileVersionService, FileVersionService>();
         services.AddScoped<IFileShareService, FileShareService>();
+        services.AddScoped<IFolderShareService, FolderShareService>();
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtProvider, JwtProvider>();
