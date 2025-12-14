@@ -6,7 +6,7 @@ using System;
 
 namespace SkyBox.API.Services;
 
-public class FileVersionService(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IStorageQuotaService storageQuotaService, IWebHostEnvironment webHostEnvironment) : IFileVersionService
+public class FileVersionService(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IStorageQuotaService storageQuotaService) : IFileVersionService
 {
     public async Task<Result<IEnumerable<FileVersionResponse>>> GetAllVersionsAsync(Guid fileId, string currentUserId, CancellationToken cancellationToken = default)
     {

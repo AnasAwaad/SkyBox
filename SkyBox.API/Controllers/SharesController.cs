@@ -40,9 +40,9 @@ public class SharesController(ISharedLinkService sharedLinkService) : Controller
 
     [HttpGet("download/{token}")]
     [AllowAnonymous]
-    public async Task<IActionResult> Download([FromRoute] string token, CancellationToken cancellationToken)
+    public async Task<IActionResult> Download([FromRoute] string token,[FromQuery] string? password, CancellationToken cancellationToken)
     {
-        var result = await sharedLinkService.DownloadByTokenAsync(token, cancellationToken);
+        var result = await sharedLinkService.DownloadByTokenAsync(token,password, cancellationToken);
 
         return result.IsSuccess ?
             File(result.Value.Content, result.Value.ContentType, result.Value.FileName) :
@@ -51,9 +51,9 @@ public class SharesController(ISharedLinkService sharedLinkService) : Controller
 
     [AllowAnonymous]
     [HttpGet("stream/{token}")]
-    public async Task<IActionResult> Stream(string token, CancellationToken cancellationToken)
+    public async Task<IActionResult> Stream(string token,[FromQuery] string? password, CancellationToken cancellationToken)
     {
-        var result = await sharedLinkService.StreamByTokenAsync(token, cancellationToken);
+        var result = await sharedLinkService.StreamByTokenAsync(token, password, cancellationToken);
 
         return result.IsSuccess ?
             File(result.Value.Stream, result.Value.ContentType, result.Value.FileName,enableRangeProcessing:true) :

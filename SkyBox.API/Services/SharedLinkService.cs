@@ -1,7 +1,8 @@
 ﻿using SkyBox.API.Contracts.SharedLink;
 using SkyBox.API.Persistence;
-using System.Security.Cryptography;
 using System.Linq.Dynamic.Core;
+using System.Security.Cryptography;
+using System.Text;
 
 
 namespace SkyBox.API.Services;
@@ -43,12 +44,12 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
         if (file is null)
             return Result.Failure<SharedLinkResponse>(FileErrors.FileNotFound);
 
-        var token = GenerateToken();
-
         var link = request.Adapt<SharedLink>();
+
         link.FileId = fileId;
         link.OwnerId = ownerId;
-        link.Token = token;
+        link.Token = GenerateToken();
+        link.PasswordHash = string.IsNullOrEmpty(request.Password) ? string.Empty : HashPassword(request.Password);
 
 
         await dbContext.SharedLinks.AddAsync(link,cancellationToken);
@@ -78,7 +79,7 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
         return Result.Success();
     }
 
-    public async Task<Result<FileContentDto>> DownloadByTokenAsync(string token, CancellationToken cancellationToken = default)
+    public async Task<Result<FileContentDto>> DownloadByTokenAsync(string token,string? password, CancellationToken cancellationToken = default)
     {
         var link =await dbContext.SharedLinks
             .Include(sl=>sl.File)
@@ -87,11 +88,24 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
         if (link is null)
             return Result.Failure<FileContentDto>(SharedLinkErrors.SharedLinkNotFound);
 
+        // expired check
         if(IsExpired(link))
             return Result.Failure<FileContentDto>(SharedLinkErrors.SharedLinkExpired);
+
+        // password check
+        if (!string.IsNullOrEmpty(link.PasswordHash))
+        {
+            if (string.IsNullOrEmpty(password))
+                return Result.Failure<FileContentDto>(SharedLinkErrors.PasswordRequired);
+
+            if (!IsValidPassword(link.PasswordHash, password))
+                return Result.Failure<FileContentDto>(SharedLinkErrors.InvalidPassword);
+        }
+           
         
+        // download check
         if(!CanDownload(link))
-            return Result.Failure<FileContentDto>(SharedLinkErrors.DownloadLimitExceeded);
+            return Result.Failure<FileContentDto>(SharedLinkErrors.DownloadNotAllowed);
 
         var file = link.File;
         var path = Path.Combine(_filesPath, file.StoredFileName);
@@ -119,7 +133,7 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
         return Result.Success(result);
     }
 
-    public async Task<Result<StreamContentDto>> StreamByTokenAsync(string token,CancellationToken cancellationToken = default)
+    public async Task<Result<StreamContentDto>> StreamByTokenAsync(string token,string? password,CancellationToken cancellationToken = default)
     {
         var link = await dbContext.SharedLinks
             .Include(s => s.File)
@@ -128,8 +142,25 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
         if (link is null || link.File.DeletedAt != null)
             return Result.Failure<StreamContentDto>(SharedLinkErrors.SharedLinkNotFound);
 
+        // expired check
         if (IsExpired(link))
             return Result.Failure<StreamContentDto>(SharedLinkErrors.SharedLinkExpired);
+
+        // password check
+        if (!string.IsNullOrEmpty(link.PasswordHash))
+            if (string.IsNullOrEmpty(password) || !IsValidPassword(link.PasswordHash, password))
+                return Result.Failure<StreamContentDto>(SharedLinkErrors.InvalidPassword);
+
+
+        // permission check
+        if (!string.IsNullOrEmpty(link.PasswordHash))
+        {
+            if (string.IsNullOrEmpty(password))
+                return Result.Failure<StreamContentDto>(SharedLinkErrors.PasswordRequired);
+
+            if (!IsValidPassword(link.PasswordHash, password))
+                return Result.Failure<StreamContentDto>(SharedLinkErrors.InvalidPassword);
+        }
 
         var file = link.File;
         var path = Path.Combine(_filesPath, file.StoredFileName);
@@ -166,7 +197,15 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
 
         var file = link.File;
 
-        var response = new SharedLinkPublicInfoResponse(file.FileName, file.Size,file.ContentType, link.ExpiresAt, link.Permission, IsExpired(link));
+        var response = new SharedLinkPublicInfoResponse(
+            FileName:file.FileName,
+            FileSize: file.Size,
+            ContentType: file.ContentType,
+            ExpiresAt:link.ExpiresAt,
+            Permission: link.Permission,
+            IsExpired:IsExpired(link),
+            RequiredPassword:link.PasswordHash is not null
+        );
 
         link.Views += 1;
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -189,8 +228,17 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
         if (link.Permission != "download")
             return false;
 
-
         return link.MaxDownloads is null || link.Downloads < link.MaxDownloads;
+    }
+
+    private static bool IsValidPassword(string storedHashPassword,string password)
+    {
+        return storedHashPassword == HashPassword(password);
+    }
+    private static string HashPassword(string password)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(password));
+        return Convert.ToHexString(bytes);
     }
 
 }

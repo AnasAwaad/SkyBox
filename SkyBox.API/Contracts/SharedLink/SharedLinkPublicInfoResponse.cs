@@ -6,5 +6,6 @@ public record SharedLinkPublicInfoResponse(
     string ContentType,
     DateTime? ExpiresAt,
     string Permission,
-    bool IsExpired
+    bool IsExpired,
+    bool RequiredPassword
 );
