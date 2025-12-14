@@ -17,7 +17,7 @@ public class SharedLink
     public int Downloads { get; set; } = 0;
     public int Views { get; set; } = 0;
     public bool IsActive { get; set; } = true;
-    public string Permission { get; set; } = "view";
+    public SharePermission Permission { get; set; } = SharePermission.View;
 
     public string? PasswordHash { get; set; }
 }

@@ -81,30 +81,15 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
 
     public async Task<Result<FileContentDto>> DownloadByTokenAsync(string token,string? password, CancellationToken cancellationToken = default)
     {
-        var link =await dbContext.SharedLinks
-            .Include(sl=>sl.File)
-            .FirstOrDefaultAsync(sl => sl.Token == token && sl.IsActive, cancellationToken);
+        var validationResult = await ValidateSharedLinkAsync(token, password, cancellationToken);
 
-        if (link is null)
-            return Result.Failure<FileContentDto>(SharedLinkErrors.SharedLinkNotFound);
+        if (validationResult.IsFailure)
+            return Result.Failure<FileContentDto>(validationResult.Error);
 
-        // expired check
-        if(IsExpired(link))
-            return Result.Failure<FileContentDto>(SharedLinkErrors.SharedLinkExpired);
+        var link = validationResult.Value;
 
-        // password check
-        if (!string.IsNullOrEmpty(link.PasswordHash))
-        {
-            if (string.IsNullOrEmpty(password))
-                return Result.Failure<FileContentDto>(SharedLinkErrors.PasswordRequired);
-
-            if (!IsValidPassword(link.PasswordHash, password))
-                return Result.Failure<FileContentDto>(SharedLinkErrors.InvalidPassword);
-        }
-           
-        
-        // download check
-        if(!CanDownload(link))
+        // check download permission
+        if (!CanDownload(link))
             return Result.Failure<FileContentDto>(SharedLinkErrors.DownloadNotAllowed);
 
         var file = link.File;
@@ -135,32 +120,17 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
 
     public async Task<Result<StreamContentDto>> StreamByTokenAsync(string token,string? password,CancellationToken cancellationToken = default)
     {
-        var link = await dbContext.SharedLinks
-            .Include(s => s.File)
-            .FirstOrDefaultAsync(s => s.Token == token && s.IsActive, cancellationToken);
+        var validationResult = await ValidateSharedLinkAsync(token, password, cancellationToken);
 
-        if (link is null || link.File.DeletedAt != null)
-            return Result.Failure<StreamContentDto>(SharedLinkErrors.SharedLinkNotFound);
+        if (validationResult.IsFailure)
+            return Result.Failure<StreamContentDto>(validationResult.Error);
 
-        // expired check
-        if (IsExpired(link))
-            return Result.Failure<StreamContentDto>(SharedLinkErrors.SharedLinkExpired);
+        var link = validationResult.Value;
 
-        // password check
-        if (!string.IsNullOrEmpty(link.PasswordHash))
-            if (string.IsNullOrEmpty(password) || !IsValidPassword(link.PasswordHash, password))
-                return Result.Failure<StreamContentDto>(SharedLinkErrors.InvalidPassword);
+        // check permission (view or download)
+        if (link.Permission != SharePermission.View && link.Permission != SharePermission.Download)
+            return Result.Failure<StreamContentDto>(SharedLinkErrors.PermissionDenied);
 
-
-        // permission check
-        if (!string.IsNullOrEmpty(link.PasswordHash))
-        {
-            if (string.IsNullOrEmpty(password))
-                return Result.Failure<StreamContentDto>(SharedLinkErrors.PasswordRequired);
-
-            if (!IsValidPassword(link.PasswordHash, password))
-                return Result.Failure<StreamContentDto>(SharedLinkErrors.InvalidPassword);
-        }
 
         var file = link.File;
         var path = Path.Combine(_filesPath, file.StoredFileName);
@@ -202,7 +172,7 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
             FileSize: file.Size,
             ContentType: file.ContentType,
             ExpiresAt:link.ExpiresAt,
-            Permission: link.Permission,
+            Permission: link.Permission == SharePermission.View ? "view" : "download",
             IsExpired:IsExpired(link),
             RequiredPassword:link.PasswordHash is not null
         );
@@ -212,6 +182,38 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
 
         return Result.Success(response);
     }
+
+    /// <summary>
+    /// Validates a shared link by token, including existence, expiration,
+    /// and optional password verification, and returns the link if valid.
+    /// </summary>
+    private async Task<Result<SharedLink>> ValidateSharedLinkAsync(string token,string? password,CancellationToken cancellationToken)
+    {
+        var link = await dbContext.SharedLinks
+            .Include(sl => sl.File)
+            .FirstOrDefaultAsync(sl => sl.Token == token && sl.IsActive, cancellationToken);
+
+        // link exists
+        if (link is null || link.File.DeletedAt != null)
+            return Result.Failure<SharedLink>(SharedLinkErrors.SharedLinkNotFound);
+
+        // check if link expired
+        if (IsExpired(link))
+            return Result.Failure<SharedLink>(SharedLinkErrors.SharedLinkExpired);
+
+        // check password protected
+        if (!string.IsNullOrEmpty(link.PasswordHash))
+        {
+            if (string.IsNullOrEmpty(password))
+                return Result.Failure<SharedLink>(SharedLinkErrors.PasswordRequired);
+
+            if (!IsValidPassword(link.PasswordHash, password))
+                return Result.Failure<SharedLink>(SharedLinkErrors.InvalidPassword);
+        }
+
+        return Result.Success(link);
+    }
+
 
     private static string GenerateToken()
     {
@@ -225,7 +227,7 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
 
     private static bool CanDownload(SharedLink link)
     {
-        if (link.Permission != "download")
+        if (link.Permission != SharePermission.Download)
             return false;
 
         return link.MaxDownloads is null || link.Downloads < link.MaxDownloads;
