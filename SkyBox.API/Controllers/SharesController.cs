@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SkyBox.API.Contracts.SharedLink;
 
 namespace SkyBox.API.Controllers;
 [Route("api/[controller]")]
 [ApiController]
+
 public class SharesController(ISharedLinkService sharedLinkService) : ControllerBase
 {
     [Authorize(Roles = $"{DefaultRoles.Admin},{DefaultRoles.User}")]
@@ -31,6 +33,7 @@ public class SharesController(ISharedLinkService sharedLinkService) : Controller
 
     [AllowAnonymous]
     [HttpGet("info/{token}")]
+    [EnableRateLimiting("SharedLinksPolicy")]
     public async Task<IActionResult> GetInfo(string token, CancellationToken cancellationToken)
     {
         var result = await sharedLinkService.GetInfoByTokenAsync(token, cancellationToken);
@@ -40,6 +43,7 @@ public class SharesController(ISharedLinkService sharedLinkService) : Controller
 
     [HttpGet("download/{token}")]
     [AllowAnonymous]
+    [EnableRateLimiting("SharedLinksPolicy")]
     public async Task<IActionResult> Download([FromRoute] string token,[FromQuery] string? password, CancellationToken cancellationToken)
     {
         var result = await sharedLinkService.DownloadByTokenAsync(token,password, cancellationToken);
@@ -51,6 +55,7 @@ public class SharesController(ISharedLinkService sharedLinkService) : Controller
 
     [AllowAnonymous]
     [HttpGet("stream/{token}")]
+    [EnableRateLimiting("SharedLinksPolicy")]
     public async Task<IActionResult> Stream(string token,[FromQuery] string? password, CancellationToken cancellationToken)
     {
         var result = await sharedLinkService.StreamByTokenAsync(token, password, cancellationToken);

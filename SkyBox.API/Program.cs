@@ -38,6 +38,8 @@ app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
+app.UseRateLimiter();
+
 app.UseStaticFiles();
 
 app.UseHangfireDashboard();

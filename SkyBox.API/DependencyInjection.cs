@@ -14,6 +14,7 @@ using SkyBox.API.Settings;
 using SkyBox.API.Validators;
 using System.Reflection;
 using System.Text;
+using System.Threading.RateLimiting;
 
 
 
@@ -61,6 +62,39 @@ public static class DependencyInjection
         services.Configure<MailSettings>(configuration.GetSection(nameof(MailSettings)));
 
         services.AddHttpContextAccessor();
+
+
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+            options.AddPolicy("SharedLinksPolicy", context =>
+            {
+                // limit by IP address
+                var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: ip,
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 20,                    // 20 requests
+                        Window = TimeSpan.FromMinutes(1),    // per minute
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0                       // reject immediately
+                    });
+            });
+
+            options.OnRejected = async (context, token) =>
+            {
+                context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                context.HttpContext.Response.ContentType = "application/json";
+
+                await context.HttpContext.Response.WriteAsync(
+                    """{ "error": "Too many requests. Please try again later." }""",
+                    token);
+            };
+        });
+
 
 
         return services;
