@@ -5,18 +5,18 @@ namespace SkyBox.API.Services;
 
 public class FileShareService(ApplicationDbContext dbContext) : IFileShareService
 {
-    public async Task<Result<IEnumerable<SharedWithMeResponse>>> GetSharedWithMeAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<Result<PaginatedList<SharedWithMeResponse>>> GetSharedWithMeAsync(string userId, int pageNumber, int pageSize, CancellationToken cancellationToken = default)
     {
-        var shares = await dbContext.FileShares
+        var query = dbContext.FileShares
             .Where(x => x.SharedWithUserId == userId && !x.IsRevoked)
             .Include(x => x.File)
             .Include(x => x.Owner)
             .AsNoTracking()
-            .ToListAsync(cancellationToken);
+            .ProjectToType<SharedWithMeResponse>();
 
-        var response = shares.Adapt<IEnumerable<SharedWithMeResponse>>();
+        var result = await PaginatedList<SharedWithMeResponse>.CreateAsync(query,pageNumber,pageSize,cancellationToken);
 
-        return Result.Success(response);
+        return Result.Success(result);
     }
 
 
@@ -53,17 +53,31 @@ public class FileShareService(ApplicationDbContext dbContext) : IFileShareServic
     public async Task<Result> RevokeAsync(Guid fileId, string ownerId, string sharedWithUserId, CancellationToken cancellationToken = default)
     {
         var share = await dbContext.FileShares
-            .FirstOrDefaultAsync(x => x.FileId == fileId && x.OwnerId == ownerId && x.SharedWithUserId == sharedWithUserId &&!x.IsRevoked,
+            .FirstOrDefaultAsync(x => x.FileId == fileId && x.OwnerId == ownerId && x.SharedWithUserId == sharedWithUserId && !x.IsRevoked,
             cancellationToken);
 
         if (share is null)
             return Result.Failure(FileShareErrors.ShareNotFound);
 
         share.IsRevoked = true;
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         return Result.Success();
     }
 
+    public async Task<Result> UpdatePermissionAsync(Guid fileId, string ownerId, string sharedWithUserId, SharePermission permission, CancellationToken cancellationToken = default)
+    {
+        var share = await dbContext.FileShares
+            .FirstOrDefaultAsync(x => x.FileId == fileId && x.OwnerId == ownerId && x.SharedWithUserId == sharedWithUserId && !x.IsRevoked,
+                cancellationToken);
+
+        if (share is null)
+            return Result.Failure(FileShareErrors.ShareNotFound);
+
+        share.Permission = permission;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
+    }
 
 }
