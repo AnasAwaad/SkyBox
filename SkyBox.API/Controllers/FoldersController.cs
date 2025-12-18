@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SkyBox.API.Contracts.Folder;
+using SkyBox.API.Services;
 
 namespace SkyBox.API.Controllers;
 [Route("api/[controller]")]
@@ -102,6 +103,26 @@ public class FoldersController(IFolderService folderService) : ControllerBase
     public async Task<IActionResult> RenameFolder([FromRoute] Guid id, [FromBody] RenameFolderRequest request, CancellationToken cancellationToken)
     {
         var result = await folderService.RenameFolderAsync(id,request.Name, User.GetUserId(), cancellationToken);
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
+
+
+    /// <summary>
+    /// Toggle favorite status for a folder.
+    /// </summary>
+    /// <param name="id">Folder unique identifier.</param>
+    /// <response code="204">Folder favorite status toggled successfully.</response>
+    /// <response code="401">User is not authenticated.</response>
+    /// <response code="403">User is not authorized to toggle favorite status to the folder.</response>
+    /// <response code="404">Folder not found.</response>
+    [HttpPut("{id}/favorite")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ToggleFavorite([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var result = await folderService.ToggleFavoriteStatusAsync(id, User.GetUserId(), cancellationToken);
         return result.IsSuccess ? NoContent() : result.ToProblem();
     }
 }

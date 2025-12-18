@@ -1,6 +1,4 @@
 ﻿using SkyBox.API.Contracts.Folder;
-using SkyBox.API.Persistence;
-using System.Threading;
 using System.Linq.Dynamic.Core;
 
 
@@ -10,22 +8,17 @@ public class FolderService(ApplicationDbContext dbContext) : IFolderService
 {
     public async Task<Result<FolderResponse>> CreateFolderAsync(FolderRequest request, string userId, CancellationToken cancellationToken)
     {
-
-        Guid? parentId = null;
-
         if (request.ParentFolderId.HasValue)
         {
             var parentFolder = await dbContext.Folders.FirstOrDefaultAsync(x => x.Id == request.ParentFolderId.Value && x.OwnerId == userId);
 
             if (parentFolder is null)
                 return Result.Failure<FolderResponse>(FolderErrors.ParentFolderNotFound);
-
-            parentId = parentFolder.Id;
         }
 
         // Check for existing folder with the same name in the same parent folder
         var existingFolder = await dbContext.Folders
-            .AnyAsync(x => x.Name.ToLower() == request.Name.ToLower() && x.ParentId == parentId && x.OwnerId == userId, cancellationToken);
+            .AnyAsync(x => x.Name.ToLower() == request.Name.ToLower() && x.ParentId == request.ParentFolderId && x.OwnerId == userId, cancellationToken);
 
         if (existingFolder)
             return Result.Failure<FolderResponse>(FolderErrors.FolderExists);
@@ -34,7 +27,7 @@ public class FolderService(ApplicationDbContext dbContext) : IFolderService
         var folder = new Folder
         {
             Name = request.Name,
-            ParentId = parentId,
+            ParentId = request.ParentFolderId,
             OwnerId = userId,
         };
 
@@ -171,6 +164,20 @@ public class FolderService(ApplicationDbContext dbContext) : IFolderService
         folder.Name = newName;
         folder.UpdatedAt = DateTime.UtcNow;
 
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
+    }
+
+
+    public async Task<Result> ToggleFavoriteStatusAsync(Guid folderId, string userId, CancellationToken cancellationToken = default)
+    {
+        var folder = await dbContext.Folders.FirstOrDefaultAsync(x => x.Id == folderId, cancellationToken);
+
+        if (folder is null)
+            return Result.Failure(FolderErrors.FolderNotFound);
+
+        folder.IsFavorite = !folder.IsFavorite;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

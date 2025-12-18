@@ -35,4 +35,10 @@ public interface IFileService
     /// Only the file owner is allowed to delete the file.
     /// </summary>
     Task<Result> DeleteAsync(Guid fileId,string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Performs a toggle favorite status on file.
+    /// Only the file owner is allowed to toggle status on file.
+    /// </summary>
+    Task<Result> ToggleFavoriteStatusAsync(Guid fileId,string userId, CancellationToken cancellationToken = default);
 }

@@ -253,4 +253,17 @@ public class FileService(IStorageQuotaService storageQuotaService,
         return false;
     }
 
+    public async Task<Result> ToggleFavoriteStatusAsync(Guid fileId, string userId, CancellationToken cancellationToken = default)
+    {
+        var file = await dbContext.Files
+            .FirstOrDefaultAsync(x => x.Id == fileId && x.OwnerId == userId, cancellationToken);
+
+        if (file is null)
+            return Result.Failure(FileErrors.FileNotFound);
+
+        file.IsFavorite = !file.IsFavorite;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
+    }
 }

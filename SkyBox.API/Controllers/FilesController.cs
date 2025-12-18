@@ -112,6 +112,25 @@ public class FilesController(IFileService fileService) : ControllerBase
     }
 
     /// <summary>
+    /// Toggle favorite status for a file.
+    /// </summary>
+    /// <param name="id">File unique identifier.</param>
+    /// <response code="204">File favorite toggled successfully.</response>
+    /// <response code="401">User is not authenticated.</response>
+    /// <response code="403">User is not authorized to toggle favorite status to the file.</response>
+    /// <response code="404">File not found.</response>
+    [HttpPut("{id}/favorite")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ToggleFavorite([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var result = await fileService.ToggleFavoriteStatusAsync(id, User.GetUserId(), cancellationToken);
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
+
+    /// <summary>
     /// Delete a file.
     /// </summary>
     /// <remarks>

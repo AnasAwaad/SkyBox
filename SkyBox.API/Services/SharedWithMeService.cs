@@ -57,8 +57,5 @@ public class SharedWithMeService(ApplicationDbContext dbContext) : ISharedWithMe
         var result = await PaginatedList<SharedWithMeItemResponse>.CreateAsync(source, filters.PageNumber, filters.PageSize, cancellationToken);
 
         return Result.Success(result);
-
-
-
     }
 }
