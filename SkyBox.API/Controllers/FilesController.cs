@@ -6,7 +6,7 @@ namespace SkyBox.API.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [Produces("application/json")]
-[Authorize(Roles = $"{DefaultRoles.User},{DefaultRoles.Admin}")]
+//[Authorize(Roles = $"{DefaultRoles.User},{DefaultRoles.Admin}")]
 public class FilesController(IFileService fileService) : ControllerBase
 {
     /// <summary>
@@ -108,7 +108,7 @@ public class FilesController(IFileService fileService) : ControllerBase
     {
         var result = await fileService.StreamAsync(id, User.GetUserId(), cancellationToken);
 
-        return result.IsSuccess ? File(result.Value.Stream, result.Value.ContentType, result.Value.FileName, enableRangeProcessing: true) : result.ToProblem();
+        return result.IsSuccess ? File(result.Value.Stream, result.Value.ContentType, enableRangeProcessing: true) : result.ToProblem();
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
-﻿using FluentValidation.AspNetCore;
+﻿using Azure.Storage.Blobs;
+using FluentValidation.AspNetCore;
 using Hangfire;
 using MapsterMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -52,6 +53,8 @@ public static class DependencyInjection
         services.AddScoped<IFolderShareService, FolderShareService>();
         services.AddScoped<ISharedWithMeService, SharedWithMeService>();
         services.AddScoped<IFavoriteService, FavoriteService>();
+        services.AddSingleton<IBlobService, BlobService>();
+        services.AddSingleton(_ => new BlobServiceClient(configuration.GetConnectionString("BlobStorage")));
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtProvider, JwtProvider>();

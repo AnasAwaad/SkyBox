@@ -7,7 +7,8 @@ namespace SkyBox.API.Services;
 public class FileService(IStorageQuotaService storageQuotaService,
     IFileVersionService fileVersionService,
     IWebHostEnvironment webHostEnvironment,
-    ApplicationDbContext dbContext) : IFileService
+    ApplicationDbContext dbContext,
+    IBlobService blobService) : IFileService
 {
     private readonly string _filesPath = $"{webHostEnvironment.WebRootPath}/uploads";
 
@@ -103,15 +104,15 @@ public class FileService(IStorageQuotaService storageQuotaService,
             return Result.Failure<FileContentDto>(FileShareErrors.PermissionDenied);
 
 
-        var content = await storageQuotaService.DownloadFileAsync(file.StoredFileName, cancellationToken);
+        var fileResponse = await blobService.DownloadAsync(file.StoredFileName, cancellationToken);
 
-        if(content == null)
+        if(fileResponse == null)
             return Result.Failure<FileContentDto>(FileErrors.StorageMissing);
 
 
         var result = new FileContentDto
         {
-            Content = content,
+            //Content = fileResponse.Stream,
             ContentType = file.ContentType,
             FileName = file.FileName
         };
@@ -132,14 +133,19 @@ public class FileService(IStorageQuotaService storageQuotaService,
         if (!await CanAccessFileAsync(file, userId))
             return Result.Failure<StreamContentDto>(FileShareErrors.PermissionDenied);
 
-        var path = Path.Combine(_filesPath, file.StoredFileName);
+        //var path = Path.Combine(_filesPath, file.StoredFileName);
 
-        var fileStream = File.OpenRead(path);
+        //var fileStream = File.OpenRead(path);
+        var fileResponse = await blobService.DownloadAsync(file.StoredFileName, cancellationToken);
+
+        if (fileResponse == null)
+            return Result.Failure<StreamContentDto>(FileErrors.StorageMissing);
+
 
         var result = new StreamContentDto
         {
-            Stream = fileStream,
-            ContentType = file.ContentType,
+            Stream = fileResponse.Stream,
+            ContentType = fileResponse.ContentType,
             FileName = file.FileName
         };
 
@@ -206,7 +212,9 @@ public class FileService(IStorageQuotaService storageQuotaService,
             return Result.Success(new SaveOrVersionResult(versionResult.Value, true));
         }
 
-        var storedFileName = await storageQuotaService.UploadFileAsync(file, cancellationToken);
+        using Stream stream = file.OpenReadStream();
+        var storedFileName = await blobService.UploadAsync(stream, file.ContentType, cancellationToken);
+        //var storedFileName = await storageQuotaService.UploadFileAsync(file, cancellationToken);
 
         var uploadedFile = new UploadedFile
         {
