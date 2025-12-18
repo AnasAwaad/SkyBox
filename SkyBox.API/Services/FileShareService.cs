@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using SkyBox.API.Contracts.FileShares;
+﻿using SkyBox.API.Contracts.FileShares;
 
 namespace SkyBox.API.Services;
 
@@ -59,6 +58,7 @@ public class FileShareService(ApplicationDbContext dbContext) : IFileShareServic
         if (share is null)
             return Result.Failure(FileShareErrors.ShareNotFound);
 
+        // Soft revoke
         share.IsRevoked = true;
         await dbContext.SaveChangesAsync(cancellationToken);
 

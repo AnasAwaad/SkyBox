@@ -1,13 +1,12 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using SkyBox.API.Contracts.Files;
 using SkyBox.API.Contracts.FileVersions;
-using SkyBox.API.Entities;
-using System;
 
 namespace SkyBox.API.Services;
 
-public class FileVersionService(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IStorageQuotaService storageQuotaService) : IFileVersionService
+public class FileVersionService(ApplicationDbContext dbContext,
+    UserManager<ApplicationUser> userManager,
+    IStorageQuotaService storageQuotaService) : IFileVersionService
 {
     public async Task<Result<IEnumerable<FileVersionResponse>>> GetAllVersionsAsync(Guid fileId, string currentUserId, CancellationToken cancellationToken = default)
     {
@@ -27,9 +26,6 @@ public class FileVersionService(ApplicationDbContext dbContext, UserManager<Appl
         return Result.Success(versions);
     }
 
-    //1) Create new version (backup of current)
-    //2) Restore selected version by copying its properties to current
-    //3) Keep all version history intact
     public async Task<Result> RestoreVersionAsync(Guid fileId, Guid versionId, string userId, CancellationToken cancellationToken = default)
     {
         var result = await ValidateAndGetFileAndVersionAsync(fileId, versionId, userId, cancellationToken);

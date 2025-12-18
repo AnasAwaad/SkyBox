@@ -89,7 +89,6 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
 
         var link = validationResult.Value;
 
-        // check download permission
         if (!CanDownload(link))
             return Result.Failure<FileContentDto>(SharedLinkErrors.DownloadNotAllowed);
 
@@ -194,15 +193,12 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
             .Include(sl => sl.File)
             .FirstOrDefaultAsync(sl => sl.Token == token && sl.IsActive, cancellationToken);
 
-        // link exists
         if (link is null || link.File.DeletedAt != null)
             return Result.Failure<SharedLink>(SharedLinkErrors.SharedLinkNotFound);
 
-        // check if link expired
         if (IsExpired(link))
             return Result.Failure<SharedLink>(SharedLinkErrors.SharedLinkExpired);
 
-        // check password protected
         if (!string.IsNullOrEmpty(link.PasswordHash))
         {
             if (string.IsNullOrEmpty(password))

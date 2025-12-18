@@ -8,19 +8,32 @@ namespace SkyBox.API.Controllers;
 
 public class SharesController(ISharedLinkService sharedLinkService) : ControllerBase
 {
-    [Authorize(Roles = $"{DefaultRoles.Admin},{DefaultRoles.User}")]
+    /// <summary>
+    /// Get all active shared links created by the current user.
+    /// </summary>
+    /// <param name="filters">Pagination, search and sorting filters.</param>
+    /// <response code="200">Returns paginated list of shared links.</response>
+    /// <response code="401">User is not authenticated.</response>
+    [Authorize]
     [HttpGet]
+    [ProducesResponseType(typeof(PaginatedList<SharedLinkResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMyLinks([FromQuery] RequestFilters filters,CancellationToken cancellationToken)
     {
-        var userId = User.GetUserId();
-
-        var result = await sharedLinkService.GetMyLinksAsync(userId, filters, cancellationToken);
+        var result = await sharedLinkService.GetMyLinksAsync(User.GetUserId(), filters, cancellationToken);
 
         return Ok(result.Value);
     }
 
+    /// <summary>
+    /// Create a new shared link for a file.
+    /// </summary>
+    /// <param name="fileId">Target file identifier.</param>
+    /// <param name="request">Shared link configuration.</param>
+    /// <response code="201">Shared link created successfully.</response>
+    /// <response code="404">File not found.</response>
+    [Authorize]
     [HttpPost("{fileId}")]
-    [Authorize(Roles = $"{DefaultRoles.Admin},{DefaultRoles.User}")]
+    [ProducesResponseType(typeof(SharedLinkResponse), StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateShareLink([FromRoute] Guid fileId, [FromBody] CreateSharedLinkRequest request,CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
@@ -31,6 +44,12 @@ public class SharesController(ISharedLinkService sharedLinkService) : Controller
             result.ToProblem();
     }
 
+    /// <summary>
+    /// Get public information about a shared link.
+    /// </summary>
+    /// <param name="token">Shared link token.</param>
+    /// <response code="200">Returns public file info.</response>
+    /// <response code="404">Shared link not found or expired.</response>
     [AllowAnonymous]
     [HttpGet("info/{token}")]
     [EnableRateLimiting("SharedLinksPolicy")]
@@ -41,8 +60,11 @@ public class SharesController(ISharedLinkService sharedLinkService) : Controller
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 
-    [HttpGet("download/{token}")]
+    /// <summary>
+    /// Download a file using a shared link.
+    /// </summary>
     [AllowAnonymous]
+    [HttpGet("download/{token}")]
     [EnableRateLimiting("SharedLinksPolicy")]
     public async Task<IActionResult> Download([FromRoute] string token,[FromQuery] string? password, CancellationToken cancellationToken)
     {
@@ -53,6 +75,9 @@ public class SharesController(ISharedLinkService sharedLinkService) : Controller
             result.ToProblem();
     }
 
+    /// <summary>
+    /// Stream a file using a shared link.
+    /// </summary>
     [AllowAnonymous]
     [HttpGet("stream/{token}")]
     [EnableRateLimiting("SharedLinksPolicy")]
@@ -64,7 +89,12 @@ public class SharesController(ISharedLinkService sharedLinkService) : Controller
             File(result.Value.Stream, result.Value.ContentType, result.Value.FileName,enableRangeProcessing:true) :
             result.ToProblem();
     }
-
+    /// <summary>
+    /// Delete a shared link.
+    /// </summary>
+    /// <param name="id">Shared link identifier.</param>
+    /// <response code="204">Shared link deleted.</response>
+    /// <response code="404">Shared link not found.</response>
     [Authorize]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
