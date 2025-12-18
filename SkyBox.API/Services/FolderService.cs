@@ -25,7 +25,7 @@ public class FolderService(ApplicationDbContext dbContext) : IFolderService
 
         // Check for existing folder with the same name in the same parent folder
         var existingFolder = await dbContext.Folders
-            .AnyAsync(x => x.Name.ToLower() == request.Name.ToLower() && x.ParentId == parentId && x.OwnerId == userId,cancellationToken);
+            .AnyAsync(x => x.Name.ToLower() == request.Name.ToLower() && x.ParentId == parentId && x.OwnerId == userId, cancellationToken);
 
         if (existingFolder)
             return Result.Failure<FolderResponse>(FolderErrors.FolderExists);
@@ -44,27 +44,107 @@ public class FolderService(ApplicationDbContext dbContext) : IFolderService
         return Result.Success(folder.Adapt<FolderResponse>());
     }
 
-    public async Task<Result<PaginatedList<FolderContentResponse>>> GetFolderContentAsync(RequestFilters filters, Guid folderId, string userId, CancellationToken cancellationToken = default)
+    public async Task<Result<PaginatedList<FolderContentResponse>>> GetFolderRootContentAsync(RequestFilters filters, string userId, CancellationToken cancellationToken = default)
     {
-        var folder = await dbContext.Folders
-            .FirstOrDefaultAsync(f => f.Id == folderId,cancellationToken);
+        var foldersQuery = dbContext.Folders
+            .AsNoTracking()
+            .Where(f => f.ParentId == null && f.OwnerId==userId)
+            .Select(f => new
+            {
+                f.Id,
+                f.Name,
+                IsFolder = true,
+                f.IsFavorite,
+                f.CreatedAt,
+                ContentType = (string?)null,
+                Size = (long?)null
+            });
 
-        if (folder is null)
-            return Result.Failure<PaginatedList<FolderContentResponse>>(FolderErrors.FolderNotFound);
+        var filesQuery = dbContext.Files
+            .AsNoTracking()
+            .Where(f => f.FolderId == null && f.OwnerId==userId && f.DeletedAt == null)
+            .Select(f => new
+            {
+                f.Id,
+                Name = f.FileName,
+                IsFolder = false,
+                f.IsFavorite,
+                CreatedAt = f.UploadedAt,
+                ContentType = (string?)f.ContentType,
+                Size = (long?)f.Size
+            });
 
-        // Authorization check
-        if (!await CanAccessFolderAsync(folder, userId))
-            return Result.Failure<PaginatedList<FolderContentResponse>>(FolderShareErrors.PermissionDenied);
 
-
-        var query = dbContext.Folders
-           .Include(x => x.Files)
-           .Include(x => x.Folders)
-           .Where(x => x.Id == folderId);
+        var query = foldersQuery.Concat(filesQuery);
 
 
         if (!string.IsNullOrEmpty(filters.SearchValue))
-            query = query.Where(x => x.Name.Contains(filters.SearchValue.ToLower()));
+            query = query.Where(x => x.Name.Contains(filters.SearchValue, StringComparison.CurrentCultureIgnoreCase));
+
+
+        if (!string.IsNullOrEmpty(filters.SortColumn))
+            query = query.OrderBy($"{filters.SortColumn} {filters.SortDirection}");
+
+        var source = query
+            .ProjectToType<FolderContentResponse>()
+            .AsNoTracking();
+
+        var result = await PaginatedList<FolderContentResponse>.CreateAsync(source, filters.PageNumber, filters.PageSize, cancellationToken);
+
+        return Result.Success(result);
+
+    }
+    public async Task<Result<PaginatedList<FolderContentResponse>>> GetFolderContentAsync(RequestFilters filters, Guid? folderId, string userId, CancellationToken cancellationToken = default)
+    {
+        if (folderId.HasValue)
+        {
+            // Get root content
+            var folder = await dbContext.Folders
+                .FirstOrDefaultAsync(f => f.Id == folderId, cancellationToken);
+
+            if (folder is null)
+                return Result.Failure<PaginatedList<FolderContentResponse>>(FolderErrors.FolderNotFound);
+
+            // Authorization check
+            if (!await CanAccessFolderAsync(folder, userId))
+                return Result.Failure<PaginatedList<FolderContentResponse>>(FolderShareErrors.PermissionDenied);
+        }
+
+
+        var foldersQuery = dbContext.Folders
+            .AsNoTracking()
+            .Where(f => f.ParentId == folderId)
+            .Select(f => new
+            {
+                f.Id,
+                Name = f.Name,
+                IsFolder = true,
+                f.IsFavorite,
+                CreatedAt = f.CreatedAt,
+                ContentType = (string?)null,
+                Size = (long?)null
+            });
+
+        var filesQuery = dbContext.Files
+            .AsNoTracking()
+            .Where(f => f.FolderId == folderId && f.DeletedAt == null)
+            .Select(f => new
+            {
+                f.Id,
+                Name = f.FileName,
+                IsFolder = false,
+                f.IsFavorite,
+                CreatedAt = f.UploadedAt,
+                ContentType = (string?)f.ContentType,
+                Size = (long?)f.Size
+            });
+
+
+        var query = foldersQuery.Concat(filesQuery);
+
+
+        if (!string.IsNullOrEmpty(filters.SearchValue))
+            query = query.Where(x => x.Name.ToLower().Contains(filters.SearchValue.ToLower()));
 
 
         if (!string.IsNullOrEmpty(filters.SortColumn))
@@ -80,7 +160,7 @@ public class FolderService(ApplicationDbContext dbContext) : IFolderService
 
     }
 
-    public async Task<Result> RenameFolderAsync(Guid folderId, string newName,string userId, CancellationToken cancellationToken)
+    public async Task<Result> RenameFolderAsync(Guid folderId, string newName, string userId, CancellationToken cancellationToken)
     {
         var folder = await dbContext.Folders
             .FirstOrDefaultAsync(f => f.Id == folderId && f.OwnerId == userId, cancellationToken);

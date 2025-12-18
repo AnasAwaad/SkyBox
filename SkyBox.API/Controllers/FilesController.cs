@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SkyBox.API.Abstractions.Consts;
+using SkyBox.API.Contracts.Files;
 
 namespace SkyBox.API.Controllers;
 [Route("api/[controller]")]

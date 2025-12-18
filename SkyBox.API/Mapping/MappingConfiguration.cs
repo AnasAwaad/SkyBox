@@ -9,6 +9,24 @@ public class MappingConfiguration : IRegister
 {
     public void Register(TypeAdapterConfig config)
     {
+        config.NewConfig<Folder, FolderContentResponse>()
+            .Map(dest => dest.Id, src => src.Id)
+            .Map(dest => dest.Name, src => src.Name)
+            .Map(dest => dest.IsFolder, src => true)
+            .Map(dest => dest.IsFavorite, src => src.IsFavorite)
+            .Map(dest => dest.CreatedAt, src => src.CreatedAt)
+            .Map(dest => dest.ContentType, src => (string?)null)
+            .Map(dest => dest.Size, src => (long?)null);
+                     
+        config.NewConfig<UploadedFile, FolderContentResponse>()
+            .Map(dest => dest.Id, src => src.Id)
+            .Map(dest => dest.Name, src => src.FileName)
+            .Map(dest => dest.IsFolder, src => false)
+            .Map(dest => dest.IsFavorite, src => src.IsFavorite)
+            .Map(dest => dest.CreatedAt, src => src.UploadedAt)
+            .Map(dest => dest.ContentType, src => src.ContentType)
+            .Map(dest => dest.Size, src => src.Size);
+
         TypeAdapterConfig<Folder, FolderChildrenResponse>.NewConfig()
             .Map(dest => dest.Id, src => src.Id)
             .Map(dest => dest.Name, src => src.Name)

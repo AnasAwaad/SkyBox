@@ -4,6 +4,7 @@ using MapsterMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SkyBox.API.Authentication;
@@ -119,17 +120,17 @@ public static class DependencyInjection
     private static IServiceCollection AddAuthConfigurations(this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddSwaggerGen(c =>
+        services.AddSwaggerGen(options =>
         {
             // Add JWT button to Swagger
-            c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
                 Type = SecuritySchemeType.Http,
                 Scheme = "bearer",
             });
 
             // Apply Bearer token to all operations
-            c.AddSecurityRequirement(new OpenApiSecurityRequirement
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
                     {
                         new OpenApiSecurityScheme
@@ -143,6 +144,11 @@ public static class DependencyInjection
                         []
                     }
                 });
+
+            var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+            options.IncludeXmlComments(xmlPath);
+
         });
 
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>

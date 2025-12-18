@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
+using SkyBox.API.Contracts.Files;
 using SkyBox.API.Contracts.FileVersions;
 using SkyBox.API.Entities;
 using System;

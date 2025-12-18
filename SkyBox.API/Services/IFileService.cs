@@ -1,4 +1,6 @@
 ﻿
+using SkyBox.API.Contracts.Files;
+
 namespace SkyBox.API.Services;
 
 public interface IFileService

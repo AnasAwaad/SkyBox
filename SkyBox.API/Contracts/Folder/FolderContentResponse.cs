@@ -1,6 +1,11 @@
 ﻿namespace SkyBox.API.Contracts.Folder;
 
 public record FolderContentResponse(
-    IEnumerable<FolderChildrenResponse> Folders,
-    IEnumerable<FolderFileChildrenResponse> Files
+    Guid Id,
+    string Name,
+    bool IsFolder,
+    bool IsFavorite,
+    DateTime CreatedAt,
+    string? ContentType,
+    long? Size
 );

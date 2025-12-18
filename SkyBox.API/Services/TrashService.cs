@@ -1,5 +1,6 @@
 ﻿
 using Microsoft.EntityFrameworkCore;
+using SkyBox.API.Contracts.Files;
 using SkyBox.API.Errors;
 using SkyBox.API.Persistence;
 using SkyBox.API.Settings;

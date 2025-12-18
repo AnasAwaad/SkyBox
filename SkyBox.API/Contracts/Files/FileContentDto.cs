@@ -1,4 +1,4 @@
-﻿namespace SkyBox.API.Contracts;
+﻿namespace SkyBox.API.Contracts.Files;
 
 public class FileContentDto
 {

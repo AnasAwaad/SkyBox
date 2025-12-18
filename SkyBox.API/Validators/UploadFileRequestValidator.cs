@@ -1,4 +1,5 @@
-﻿using SkyBox.API.Validators.Common;
+﻿using SkyBox.API.Contracts.Files;
+using SkyBox.API.Validators.Common;
 
 namespace SkyBox.API.Validators;
 

@@ -1,4 +1,6 @@
-﻿namespace SkyBox.API.Validators.Common;
+﻿using SkyBox.API.Contracts.Files;
+
+namespace SkyBox.API.Validators.Common;
 
 public class UploadManyFilesRequestValidator : AbstractValidator<UploadManyFilesRequest>
 {

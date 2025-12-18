@@ -1,4 +1,5 @@
-﻿using SkyBox.API.Contracts.SharedLink;
+﻿using SkyBox.API.Contracts.Files;
+using SkyBox.API.Contracts.SharedLink;
 
 namespace SkyBox.API.Services;
 

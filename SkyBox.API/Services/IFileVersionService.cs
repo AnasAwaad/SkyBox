@@ -1,4 +1,5 @@
-﻿using SkyBox.API.Contracts.FileVersions;
+﻿using SkyBox.API.Contracts.Files;
+using SkyBox.API.Contracts.FileVersions;
 
 namespace SkyBox.API.Services;
 
