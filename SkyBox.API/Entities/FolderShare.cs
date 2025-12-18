@@ -7,8 +7,11 @@ public class FolderShare
     public Guid FolderId { get; set; }
     public Folder Folder { get; set; } = default!;
 
-    public string OwnerId { get; set; } = default!;
-    public string SharedWithUserId { get; set; } = default!;
+    public string OwnerId { get; set; } = string.Empty;
+    public ApplicationUser Owner { get; set; } = default!;
+
+    public string SharedWithUserId { get; set; } = string.Empty;
+    public ApplicationUser SharedWithUser { get; set; } = default!;
 
     public SharePermission Permission { get; set; } = SharePermission.View;
 

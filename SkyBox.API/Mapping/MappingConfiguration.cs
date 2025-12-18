@@ -2,6 +2,7 @@
 using SkyBox.API.Contracts.FileVersions;
 using SkyBox.API.Contracts.Folder;
 using SkyBox.API.Contracts.SharedLink;
+using SkyBox.API.Contracts.SharedWithMe;
 
 namespace SkyBox.API.Mapping;
 

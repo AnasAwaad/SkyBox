@@ -11,11 +11,6 @@ public interface IFileShareService
     Task<Result> ShareAsync(Guid fileId, string ownerId, ShareFileRequest request,CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves a paginated list of files shared with the given user.
-    /// </summary>
-    Task<Result<PaginatedList<SharedWithMeResponse>>> GetSharedWithMeAsync(string userId,int pageNumber,int pageSize,CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Revokes access to a shared file for a specific user.
     /// Only the file owner can revoke sharing.
     /// </summary>

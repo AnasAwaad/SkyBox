@@ -4,21 +4,6 @@ namespace SkyBox.API.Services;
 
 public class FileShareService(ApplicationDbContext dbContext) : IFileShareService
 {
-    public async Task<Result<PaginatedList<SharedWithMeResponse>>> GetSharedWithMeAsync(string userId, int pageNumber, int pageSize, CancellationToken cancellationToken = default)
-    {
-        var query = dbContext.FileShares
-            .Where(x => x.SharedWithUserId == userId && !x.IsRevoked)
-            .Include(x => x.File)
-            .Include(x => x.Owner)
-            .AsNoTracking()
-            .ProjectToType<SharedWithMeResponse>();
-
-        var result = await PaginatedList<SharedWithMeResponse>.CreateAsync(query,pageNumber,pageSize,cancellationToken);
-
-        return Result.Success(result);
-    }
-
-
     public async Task<Result> ShareAsync(Guid fileId, string ownerId, ShareFileRequest request, CancellationToken cancellationToken = default)
     {
         var file = await dbContext.Files

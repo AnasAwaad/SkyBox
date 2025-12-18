@@ -37,26 +37,6 @@ public class FileSharesController(IFileShareService fileShareService) : Controll
     }
 
     /// <summary>
-    /// Get files shared with the current user.
-    /// </summary>
-    /// <remarks>
-    /// Returns a paginated list of files that have been shared
-    /// with the authenticated user.
-    /// </remarks>
-    /// <param name="pageNumber">Page number (default is 1).</param>
-    /// <param name="pageSize">Number of items per page (default is 10).</param>
-    /// <response code="200">Returns paginated list of shared files.</response>
-    /// <response code="401">User is not authenticated.</response>
-    [HttpGet("shared-with-me")]
-    [ProducesResponseType(typeof(PaginatedList<SharedWithMeResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> SharedWithMe([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
-    {
-        var result = await fileShareService.GetSharedWithMeAsync(User.GetUserId(), pageNumber, pageSize);
-        return Ok(result.Value);
-    }
-
-    /// <summary>
     /// Revoke a file share.
     /// </summary>
     /// <remarks>

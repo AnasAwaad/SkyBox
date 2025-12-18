@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<IFileVersionService, FileVersionService>();
         services.AddScoped<IFileShareService, FileShareService>();
         services.AddScoped<IFolderShareService, FolderShareService>();
+        services.AddScoped<ISharedWithMeService, SharedWithMeService>();
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtProvider, JwtProvider>();
