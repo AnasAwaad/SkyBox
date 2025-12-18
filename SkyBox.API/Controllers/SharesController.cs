@@ -63,9 +63,20 @@ public class SharesController(ISharedLinkService sharedLinkService) : Controller
     /// <summary>
     /// Download a file using a shared link.
     /// </summary>
+    /// <param name="token">File to access file.</param>
+    /// <param name="password">Password for validation.</param>
+    /// <param name="cancellationToken">Token to cancel the request.</param>
+    /// <response code="200">File downloaded successfully.</response>
+    /// <response code="401">User is not authenticated.</response>
+    /// <response code="403">User does not have access to the file.</response>
+    /// <response code="404">File not found.</response>
     [AllowAnonymous]
     [HttpGet("download/{token}")]
     [EnableRateLimiting("SharedLinksPolicy")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Download([FromRoute] string token,[FromQuery] string? password, CancellationToken cancellationToken)
     {
         var result = await sharedLinkService.DownloadByTokenAsync(token,password, cancellationToken);
@@ -86,7 +97,7 @@ public class SharesController(ISharedLinkService sharedLinkService) : Controller
         var result = await sharedLinkService.StreamByTokenAsync(token, password, cancellationToken);
 
         return result.IsSuccess ?
-            File(result.Value.Stream, result.Value.ContentType, result.Value.FileName,enableRangeProcessing:true) :
+            File(result.Value.Stream, result.Value.ContentType,enableRangeProcessing:true) :
             result.ToProblem();
     }
     /// <summary>

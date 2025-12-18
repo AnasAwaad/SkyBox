@@ -8,11 +8,8 @@ using System.Text;
 
 namespace SkyBox.API.Services;
 
-public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironment webHostEnvironment) : ISharedLinkService
+public class SharedLinkService(ApplicationDbContext dbContext,IBlobService blobService) : ISharedLinkService
 {
-    private readonly string _filesPath = $"{webHostEnvironment.WebRootPath}/uploads";
-
-
     public async Task<Result<PaginatedList<SharedLinkResponse>>> GetMyLinksAsync(string userId, RequestFilters filters, CancellationToken cancellationToken)
     {
         var query = dbContext.SharedLinks
@@ -93,24 +90,15 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
             return Result.Failure<FileContentDto>(SharedLinkErrors.DownloadNotAllowed);
 
         var file = link.File;
-        var path = Path.Combine(_filesPath, file.StoredFileName);
-
-        if(!File.Exists(path))
-            return Result.Failure<FileContentDto>(FileErrors.FileNotFound);
-
-
-        MemoryStream memoryStream = new();
-        using FileStream fileStream = new(path, FileMode.Open);
-
-        await fileStream.CopyToAsync(memoryStream, cancellationToken);
-        memoryStream.Position = 0;
+        
+        var fileResponse = await blobService.DownloadAsync(file.StoredFileName, cancellationToken);
 
         link.Downloads += 1;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var result = new FileContentDto
         {
-            Content = memoryStream.ToArray(),
+            Content = fileResponse.Stream,
             ContentType = file.ContentType,
             FileName = file.FileName
         };
@@ -131,21 +119,16 @@ public class SharedLinkService(ApplicationDbContext dbContext, IWebHostEnvironme
         if (link.Permission != SharePermission.View && link.Permission != SharePermission.Download)
             return Result.Failure<StreamContentDto>(SharedLinkErrors.PermissionDenied);
 
-
         var file = link.File;
-        var path = Path.Combine(_filesPath, file.StoredFileName);
 
-        if (!File.Exists(path))
-            return Result.Failure<StreamContentDto>(FileErrors.FileNotFound);
-
-        var stream = File.OpenRead(path);
+        var fileResponse = await blobService.DownloadAsync(file.StoredFileName, cancellationToken);
 
         link.Views += 1;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var dto = new StreamContentDto
         {
-            Stream = stream,
+            Stream = fileResponse.Stream,
             ContentType = file.ContentType,
             FileName = file.FileName
         };

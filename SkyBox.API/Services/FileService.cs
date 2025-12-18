@@ -6,13 +6,9 @@ namespace SkyBox.API.Services;
 
 public class FileService(IStorageQuotaService storageQuotaService,
     IFileVersionService fileVersionService,
-    IWebHostEnvironment webHostEnvironment,
     ApplicationDbContext dbContext,
     IBlobService blobService) : IFileService
 {
-    private readonly string _filesPath = $"{webHostEnvironment.WebRootPath}/uploads";
-
-
     public async Task<Result<FileUploadResponse>> UploadAsync(IFormFile file,string userId, Guid? folderId = null, CancellationToken cancellationToken = default)
     {
         if (file is null || file.Length <= 0)
@@ -106,13 +102,9 @@ public class FileService(IStorageQuotaService storageQuotaService,
 
         var fileResponse = await blobService.DownloadAsync(file.StoredFileName, cancellationToken);
 
-        if(fileResponse == null)
-            return Result.Failure<FileContentDto>(FileErrors.StorageMissing);
-
-
         var result = new FileContentDto
         {
-            //Content = fileResponse.Stream,
+            Content = fileResponse.Stream,
             ContentType = file.ContentType,
             FileName = file.FileName
         };
@@ -133,14 +125,7 @@ public class FileService(IStorageQuotaService storageQuotaService,
         if (!await CanAccessFileAsync(file, userId))
             return Result.Failure<StreamContentDto>(FileShareErrors.PermissionDenied);
 
-        //var path = Path.Combine(_filesPath, file.StoredFileName);
-
-        //var fileStream = File.OpenRead(path);
         var fileResponse = await blobService.DownloadAsync(file.StoredFileName, cancellationToken);
-
-        if (fileResponse == null)
-            return Result.Failure<StreamContentDto>(FileErrors.StorageMissing);
-
 
         var result = new StreamContentDto
         {

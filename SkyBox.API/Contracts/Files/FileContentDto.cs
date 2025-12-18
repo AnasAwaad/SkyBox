@@ -2,7 +2,7 @@
 
 public class FileContentDto
 {
-    public byte[] Content { get; set; } = [];
+    public Stream Content { get; set; } = default!;
     public string ContentType { get; set; } = null!;
     public string FileName { get; set; } = null!;
 }

@@ -6,7 +6,7 @@ namespace SkyBox.API.Services;
 
 public class FileVersionService(ApplicationDbContext dbContext,
     UserManager<ApplicationUser> userManager,
-    IStorageQuotaService storageQuotaService) : IFileVersionService
+    IBlobService blobService) : IFileVersionService
 {
     public async Task<Result<IEnumerable<FileVersionResponse>>> GetAllVersionsAsync(Guid fileId, string currentUserId, CancellationToken cancellationToken = default)
     {
@@ -71,7 +71,8 @@ public class FileVersionService(ApplicationDbContext dbContext,
         if (user.SubscriptionPlan != SubscriptionPlan.Business)
             return Result.Failure<UploadedFile>(FileErrors.VersioningNotAllowed);
 
-        var storedFileName = await storageQuotaService.UploadFileAsync(file, cancellationToken);
+        var stream = file.OpenReadStream();
+        var storedFileName = await blobService.UploadAsync(stream,file.ContentType, cancellationToken);
 
         // create version record from existing current file
         var version = existingFile.Adapt<FileVersion>();
@@ -103,14 +104,11 @@ public class FileVersionService(ApplicationDbContext dbContext,
 
         var (file,version) = result.Value;
 
-        var content = await storageQuotaService.DownloadFileAsync(version.StoredFileName, cancellationToken);
-
-        if (content is null)
-            return Result.Failure<FileContentDto>(FileErrors.StorageMissing);
+        var fileResponse = await blobService.DownloadAsync(version.StoredFileName, cancellationToken);
 
         return Result.Success(new FileContentDto
         {
-            Content = content,
+            Content = fileResponse.Stream,
             FileName = file.FileName,
             ContentType = version.ContentType
         });

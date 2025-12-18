@@ -5,14 +5,14 @@ using SkyBox.API.Errors;
 using SkyBox.API.Persistence;
 using SkyBox.API.Settings;
 using System.Linq.Dynamic.Core;
+using System.Threading;
 
 namespace SkyBox.API.Services;
 
 public class TrashService(ApplicationDbContext dbContext,
-    IWebHostEnvironment webHostEnvironment,
+    IBlobService blobService,
     ILogger<TrashService> logger) : ITrashService
 {
-    private readonly string _filesPath = Path.Combine(webHostEnvironment.WebRootPath, "uploads");
 
     public async Task<Result<PaginatedList<TrashedFileResponse>>> GetTrashFilesAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
@@ -73,26 +73,19 @@ public class TrashService(ApplicationDbContext dbContext,
     public async Task<Result> PermanentlyDeleteAsync(Guid fileId, CancellationToken cancellationToken = default)
     {
         var file = await dbContext.Files
-            .FirstOrDefaultAsync(x => x.Id == fileId && x.DeletedAt != null);
+            .FirstOrDefaultAsync(x => x.Id == fileId && x.DeletedAt != null,cancellationToken);
 
         if (file is null)
             return Result.Failure(FileErrors.FileNotFound);
 
-        //if (!string.IsNullOrEmpty(userId))
-        //    file = file.Where(x => x.OwnerId == userId);
-
-        var filePath = Path.Combine(_filesPath, file.StoredFileName);
-        if (File.Exists(filePath))
+        try
         {
-            try
-            {
-                File.Delete(filePath);
-                logger.LogInformation("Deleted file from storage: {FilePath}", filePath);
-            }
-            catch
-            {
-                logger.LogError("Failed to delete file from storage: {FilePath}", filePath);
-            }
+            await blobService.DeleteAsync(file.StoredFileName, cancellationToken);
+            logger.LogInformation("Deleted blob from storage: {BlobName}", file.StoredFileName);
+        }
+        catch
+        {
+            logger.LogInformation("Deleted blob from storage: {BlobName}", file.StoredFileName);
         }
 
         dbContext.Files.Remove(file);
@@ -114,17 +107,14 @@ public class TrashService(ApplicationDbContext dbContext,
 
         foreach (var file in trashedFiles)
         {
-            var filePath = Path.Combine(_filesPath, file.StoredFileName);
-            if (File.Exists(filePath))
+            try
             {
-                try
-                {
-                    File.Delete(filePath);
-                }
-                catch
-                {
-                    logger.LogError("Failed to delete file from storage: {FilePath}", filePath);
-                }
+                await blobService.DeleteAsync(file.StoredFileName, cancellationToken);
+                logger.LogInformation("Deleted blob from storage: {BlobName}", file.StoredFileName);
+            }
+            catch
+            {
+                logger.LogInformation("Deleted blob from storage: {BlobName}", file.StoredFileName);
             }
 
             dbContext.Files.Remove(file);
@@ -145,18 +135,14 @@ public class TrashService(ApplicationDbContext dbContext,
 
         foreach (var file in expired)
         {
-            var fullPath = Path.Combine(_filesPath, file.StoredFileName);
-
-            if (File.Exists(fullPath))
+            try
             {
-                try 
-                { 
-                    File.Delete(fullPath);
-                }
-                catch
-                {
-                    logger.LogError("Failed to delete file from storage: {FullPath}", fullPath);
-                }
+                await blobService.DeleteAsync(file.StoredFileName);
+                logger.LogInformation("Deleted blob from storage: {BlobName}", file.StoredFileName);
+            }
+            catch
+            {
+                logger.LogInformation("Deleted blob from storage: {BlobName}", file.StoredFileName);
             }
 
             dbContext.Files.Remove(file);
