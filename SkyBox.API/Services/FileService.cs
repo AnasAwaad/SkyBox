@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using SkyBox.API.Contracts.Files;
+﻿using SkyBox.API.Contracts.Files;
 using SkyBox.API.Contracts.FileVersions;
 using System.Linq.Dynamic.Core;
 
@@ -13,48 +12,20 @@ public class FileService(IStorageQuotaService storageQuotaService,
     private readonly string _filesPath = $"{webHostEnvironment.WebRootPath}/uploads";
 
 
-    public async Task<Result<PaginatedList<FileListItemResponse>>> GetFilesAsync(RequestFilters filters,string userId, CancellationToken cancellationToken = default)
-    {
-        var query = dbContext.Files
-            .Where(x => x.DeletedAt == null && x.OwnerId == userId)
-            .AsQueryable();
-
-        if (!string.IsNullOrEmpty(filters.SearchValue))
-            query = query.Where(x => x.FileName.Contains(filters.SearchValue, StringComparison.CurrentCultureIgnoreCase));
-
-        if (!string.IsNullOrEmpty(filters.SortColumn))
-            query = query.OrderBy($"{filters.SortColumn} {filters.SortDirection}");
-
-        var source = query
-            .ProjectToType<FileListItemResponse>()
-            .AsNoTracking();
-
-        var result = await PaginatedList<FileListItemResponse>.CreateAsync(source, filters.PageNumber, filters.PageSize, cancellationToken);
-
-        return Result.Success(result);
-
-    }
-
     public async Task<Result<FileUploadResponse>> UploadAsync(IFormFile file,string userId, Guid? folderId = null, CancellationToken cancellationToken = default)
     {
-        // Validate file
         if (file is null || file.Length <= 0)
             return Result.Failure<FileUploadResponse>(FileErrors.EmptyFile);
 
-        
-        // Validate folder ownership
         var folderResult = await EnsureFolderBelongsToUserAsync(folderId, userId, cancellationToken);
         if (folderResult.IsFailure)
             return Result.Failure<FileUploadResponse>(folderResult.Error);
 
-
-        // Check storage quota
         var canUpload = await storageQuotaService.CanUploadFileAsync(userId, file.Length, cancellationToken);
         if (!canUpload)
             return Result.Failure<FileUploadResponse>(FileErrors.StorageQuotaExceeded);
 
         var saveResult = await SaveOrCreateVersionAsync(file, userId, folderId, cancellationToken);
-
         if (saveResult.IsFailure)
             return Result.Failure<FileUploadResponse>(saveResult.Error);
 
@@ -69,30 +40,25 @@ public class FileService(IStorageQuotaService storageQuotaService,
 
     public async Task<Result<IEnumerable<FileUploadResponse>>> UploadManyAsync(IFormFileCollection files,string userId, Guid? folderId = null, CancellationToken cancellationToken = default)
     {
-        // Validate files
         if (files is null || files.Count == 0)
             return Result.Failure<IEnumerable<FileUploadResponse>>(FileErrors.NoFilesProvided);
 
-        // Filter out empty files
         var nonEmptyFiles = files.Where(f => f is not null && f.Length > 0).ToList();
         if (!nonEmptyFiles.Any())
             return Result.Failure<IEnumerable<FileUploadResponse>>(FileErrors.EmptyFilesOnly);
 
 
-        // Validate folder ownership 
         var folderResult = await EnsureFolderBelongsToUserAsync(folderId, userId, cancellationToken);
         if (folderResult.IsFailure)
             return Result.Failure<IEnumerable<FileUploadResponse>>(folderResult.Error);
 
 
-        // Check storage quota
         var totalSize = files.Sum(x=>x.Length);
         var canUpload = await storageQuotaService.CanUploadFileAsync(userId, totalSize, cancellationToken);
 
         if (!canUpload)
             return Result.Failure<IEnumerable<FileUploadResponse>>(FileErrors.StorageQuotaExceeded);
 
-        // Save all files
         List<UploadedFile> uploadedFiles = [];
         var responses = new List<FileUploadResponse>();
 
@@ -104,14 +70,12 @@ public class FileService(IStorageQuotaService storageQuotaService,
             if (saveResult.IsFailure)
                 return Result.Failure<IEnumerable<FileUploadResponse>>(saveResult.Error);
 
-            // version created & persisted by FileVersionService
             if (saveResult.Value.AlreadyPersisted)
             {
                 responses.Add(saveResult.Value.File.Adapt<FileUploadResponse>());
                 continue;
             }
 
-            // new file
             uploadedFiles.Add(saveResult.Value.File);
             responses.Add(saveResult.Value.File.Adapt<FileUploadResponse>());
         }
@@ -191,6 +155,7 @@ public class FileService(IStorageQuotaService storageQuotaService,
         if (file == null || file.DeletedAt != null)
             return Result.Failure<StreamContentDto>(FileErrors.FileNotFound);
 
+        // Soft delete
         file.DeletedAt = DateTime.UtcNow;
         file.IsFavorite = false;
 
@@ -224,7 +189,6 @@ public class FileService(IStorageQuotaService storageQuotaService,
     /// </summary>
     private async Task<Result<SaveOrVersionResult>> SaveOrCreateVersionAsync(IFormFile file,string userId,Guid? folderId,CancellationToken cancellationToken = default)
     {
-        // find existing file in same folder with same name
         var existingFile = await dbContext.Files
             .FirstOrDefaultAsync(f =>
                 f.OwnerId == userId &&
@@ -235,7 +199,6 @@ public class FileService(IStorageQuotaService storageQuotaService,
 
         if (existingFile is not null)
         {
-            // create version via FileVersionService
             var versionResult = await fileVersionService.SaveNewVersionAsync(existingFile, file, userId, cancellationToken);
             if (versionResult.IsFailure)
                 return Result.Failure<SaveOrVersionResult>(versionResult.Error);
@@ -243,7 +206,6 @@ public class FileService(IStorageQuotaService storageQuotaService,
             return Result.Success(new SaveOrVersionResult(versionResult.Value, true));
         }
 
-        // store to storage and return UploadedFile
         var storedFileName = await storageQuotaService.UploadFileAsync(file, cancellationToken);
 
         var uploadedFile = new UploadedFile
@@ -261,20 +223,22 @@ public class FileService(IStorageQuotaService storageQuotaService,
         return Result.Success(new SaveOrVersionResult(uploadedFile, false));
     }
 
+    /// <summary>
+    /// Determines whether the user can access the given file.
+    /// Access is granted if the user is the owner, has a direct file share,
+    /// or has access through a shared parent folder.
+    /// </summary>
     private async Task<bool> CanAccessFileAsync(UploadedFile file, string userId)
     {
-        // Owner of the file
         if (file.OwnerId == userId)
             return true;
 
-        // Direct file share
         var hasFileShare = await dbContext.FileShares
             .AnyAsync(x => x.FileId == file.Id && x.SharedWithUserId == userId && x.OwnerId == file.OwnerId && !x.IsRevoked);
 
         if(hasFileShare)
             return true;
 
-        // Folder share
         if (file.FolderId != null)
         {
             var hasFolderShare = await dbContext.FolderShares.AnyAsync(x =>
